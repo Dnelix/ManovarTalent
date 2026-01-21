@@ -11,7 +11,8 @@ import {
   Puzzle, 
   FileText, 
   Settings,
-  Gavel
+  Gavel,
+  History
 } from 'lucide-react';
 import { UserRole } from '../../types';
 
@@ -67,6 +68,12 @@ const Sidebar: React.FC<SidebarProps> = ({ activeRole }) => {
       icon: FileText, 
       path: '/reports',
       roles: [UserRole.ORG_ADMIN, UserRole.EXECUTIVE, UserRole.HR, UserRole.MANAGER, UserRole.EMPLOYEE]
+    },
+    { 
+      name: 'Audit Log', 
+      icon: History, 
+      path: '/audit-log',
+      roles: [UserRole.ORG_ADMIN, UserRole.HR]
     },
     { 
       name: 'Settings', 

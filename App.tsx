@@ -14,6 +14,7 @@ import IntegrationsPage from './pages/Integrations';
 import ReportsPage from './pages/Reports';
 import SettingsPage from './pages/Settings';
 import PolicyStudioPage from './pages/PolicyStudio';
+import AuditLogPage from './pages/AuditLog';
 
 const mockUser: User = {
   id: 'u1',
@@ -55,6 +56,7 @@ const App: React.FC = () => {
           <Route path="/people" element={<PeoplePage role={activeRole} />} />
           <Route path="/integrations" element={<IntegrationsPage role={activeRole} />} />
           <Route path="/reports" element={<ReportsPage role={activeRole} />} />
+          <Route path="/audit-log" element={<AuditLogPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
