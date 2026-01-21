@@ -380,6 +380,7 @@ const AppraisalsPage: React.FC<{ role: UserRole }> = ({ role }) => {
         </div>
       )}
 
+      {/* Other tabs content remains the same... */}
       {activeTab === 'feedbacks' && (
         <div className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden animate-in fade-in">
           <div className="p-8 border-b border-slate-100 bg-slate-50/50">
@@ -467,6 +468,139 @@ const AppraisalsPage: React.FC<{ role: UserRole }> = ({ role }) => {
 };
 
 // --- SUB-COMPONENTS ---
+
+/**
+ * Request Feedback Modal
+ */
+const RequestFeedbackModal = ({ onClose, objectives }: any) => {
+  const [selectedColleagues, setSelectedColleagues] = useState<string[]>([]);
+  const [selectedObjs, setSelectedObjs] = useState<string[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  const colleagues = [
+    { id: 'c1', name: 'Sarah Chen', role: 'Sr. Product Manager', avatar: 'https://picsum.photos/seed/sarah/100/100' },
+    { id: 'c2', name: 'Jordan Smith', role: 'Staff Engineer', avatar: 'https://picsum.photos/seed/jordan/100/100' },
+    { id: 'c3', name: 'Elena Rossi', role: 'Product Designer', avatar: 'https://picsum.photos/seed/elena/100/100' },
+    { id: 'c4', name: 'Marcus Vane', role: 'DevOps Lead', avatar: 'https://picsum.photos/seed/marcus/100/100' },
+    { id: 'c5', name: 'Lila Ray', role: 'Customer Success', avatar: 'https://picsum.photos/seed/lila/100/100' },
+  ];
+
+  const filteredColleagues = colleagues.filter(c => 
+    c.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    c.role.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const toggleColleague = (id: string) => {
+    setSelectedColleagues(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const toggleObj = (id: string) => {
+    setSelectedObjs(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
+      <div className="bg-white rounded-[3rem] w-full max-w-3xl shadow-2xl overflow-hidden border border-slate-200 flex flex-col max-h-[90vh]">
+        <div className="p-10 border-b border-slate-100 flex items-center justify-between bg-white">
+          <div className="flex items-center space-x-5">
+            <div className="w-14 h-14 bg-primary text-white rounded-[1.25rem] flex items-center justify-center shadow-xl shadow-primary/20">
+              <UserPlus size={28} />
+            </div>
+            <div>
+              <h3 className="text-2xl font-black text-slate-900 tracking-tight uppercase leading-none">Request Feedback</h3>
+              <p className="text-sm text-slate-500 font-medium mt-1">Gather qualitative input on your horizon performance</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-2 text-slate-300 hover:text-slate-600 transition-all"><X size={28}/></button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-12 space-y-12 custom-scrollbar bg-white">
+           <div className="space-y-6">
+              <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest px-1">Select Colleagues</label>
+              <div className="relative group">
+                <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-primary transition-colors" />
+                <input 
+                  type="text" 
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  placeholder="Search by name or functional role..." 
+                  className="w-full bg-slate-50 border border-slate-100 rounded-2xl pl-12 pr-4 py-4 text-sm font-bold outline-none focus:bg-white focus:border-primary/30 focus:ring-4 focus:ring-primary/5 transition-all" 
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 {filteredColleagues.map(c => (
+                   <div 
+                    key={c.id} 
+                    onClick={() => toggleColleague(c.id)} 
+                    className={`p-5 border-2 rounded-3xl flex items-center space-x-4 cursor-pointer transition-all ${
+                      selectedColleagues.includes(c.id) 
+                        ? 'bg-primary/5 border-primary shadow-sm ring-1 ring-primary/10' 
+                        : 'bg-white border-slate-100 hover:border-slate-300'
+                    }`}
+                   >
+                      <img src={c.avatar} className="w-10 h-10 rounded-2xl object-cover shadow-sm" alt={c.name} />
+                      <div className="min-w-0">
+                         <p className="text-sm font-black text-slate-900 truncate">{c.name}</p>
+                         <p className="text-[10px] text-slate-400 font-bold uppercase truncate tracking-tight">{c.role}</p>
+                      </div>
+                      {selectedColleagues.includes(c.id) && <CheckCircle2 size={18} className="text-primary ml-auto animate-in zoom-in-95" />}
+                   </div>
+                 ))}
+              </div>
+           </div>
+
+           <div className="space-y-6">
+              <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest px-1">Focus Objectives</label>
+              <div className="space-y-3">
+                 {objectives.map((obj: any) => (
+                    <div 
+                      key={obj.id} 
+                      onClick={() => toggleObj(obj.id)} 
+                      className={`p-5 border-2 rounded-[1.5rem] flex items-center justify-between cursor-pointer transition-all ${
+                        selectedObjs.includes(obj.id) 
+                          ? 'bg-primary/5 border-primary shadow-sm' 
+                          : 'bg-white border-slate-100 hover:border-slate-300'
+                      }`}
+                    >
+                       <div className="flex items-center space-x-4">
+                          <div className={`p-2 rounded-full border-2 transition-all ${selectedObjs.includes(obj.id) ? 'bg-primary border-primary text-white' : 'bg-slate-50 border-slate-100 text-slate-300'}`}>
+                             <Target size={18} />
+                          </div>
+                          <span className="text-sm font-bold text-slate-700 tracking-tight">{obj.title}</span>
+                       </div>
+                    </div>
+                 ))}
+              </div>
+           </div>
+
+           <div className="space-y-6">
+              <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest px-1">Contextual Message</label>
+              <div className="relative group">
+                <textarea 
+                  placeholder="e.g. Seeking specific feedback on my strategic contributions to the API project..." 
+                  className="w-full bg-white text-slate-900 border border-slate-200 rounded-[2rem] p-8 text-sm font-medium outline-none focus:ring-4 focus:ring-primary/20 transition-all h-48 resize-none shadow-inner placeholder:text-slate-400" 
+                />
+                <div className="absolute bottom-6 right-6 opacity-30 group-focus-within:opacity-100 transition-opacity">
+                   <Sparkles size={20} className="text-primary" />
+                </div>
+              </div>
+           </div>
+        </div>
+
+        <div className="p-10 border-t border-slate-100 bg-white flex items-center justify-end space-x-6">
+           <button onClick={onClose} className="px-8 py-3 text-sm font-black text-slate-400 hover:text-slate-800 transition-colors uppercase tracking-widest">Discard</button>
+           <button 
+            onClick={onClose} 
+            disabled={selectedColleagues.length === 0} 
+            className="px-14 py-4 bg-primary/20 text-primary border border-primary/10 rounded-2xl text-sm font-black uppercase tracking-widest shadow-xl shadow-primary/5 hover:bg-primary hover:text-white transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+           >
+             Send Request
+           </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 /**
  * Detailed Peer Review View
@@ -944,139 +1078,6 @@ const TeamReviewItem = ({ name, role, progress, status, avatar, okrCount, onRevi
   </div>
 );
 
-const RequestFeedbackModal = ({ onClose, objectives }: any) => {
-  const [selectedColleagues, setSelectedColleagues] = useState<string[]>([]);
-  const [selectedObjs, setSelectedObjs] = useState<string[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  
-  const colleagues = [
-    { id: 'c1', name: 'Sarah Chen', role: 'Sr. Product Manager', avatar: 'https://picsum.photos/seed/sarah/100/100' },
-    { id: 'c2', name: 'Jordan Smith', role: 'Staff Engineer', avatar: 'https://picsum.photos/seed/jordan/100/100' },
-    { id: 'c3', name: 'Elena Rossi', role: 'Product Designer', avatar: 'https://picsum.photos/seed/elena/100/100' },
-    { id: 'c4', name: 'Marcus Vane', role: 'DevOps Lead', avatar: 'https://picsum.photos/seed/marcus/100/100' },
-    { id: 'c5', name: 'Lila Ray', role: 'Customer Success', avatar: 'https://picsum.photos/seed/lila/100/100' },
-  ];
-
-  const filteredColleagues = colleagues.filter(c => 
-    c.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    c.role.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const toggleColleague = (id: string) => {
-    setSelectedColleagues(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
-  };
-
-  const toggleObj = (id: string) => {
-    setSelectedObjs(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
-  };
-
-  return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
-      <div className="bg-white rounded-[3rem] w-full max-w-3xl shadow-2xl overflow-hidden border border-slate-200 flex flex-col max-h-[90vh]">
-        <div className="p-10 border-b border-slate-100 flex items-center justify-between bg-white">
-          <div className="flex items-center space-x-5">
-            <div className="w-14 h-14 bg-primary text-white rounded-[1.25rem] flex items-center justify-center shadow-xl shadow-primary/20">
-              <UserPlus size={28} />
-            </div>
-            <div>
-              <h3 className="text-2xl font-black text-slate-900 tracking-tight uppercase leading-none">Request Calibration</h3>
-              <p className="text-sm text-slate-500 font-medium mt-1">Gather qualitative input on your horizon performance</p>
-            </div>
-          </div>
-          <button onClick={onClose} className="p-2 text-slate-300 hover:text-slate-600 transition-all"><X size={28}/></button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-12 space-y-12 custom-scrollbar bg-white">
-           <div className="space-y-6">
-              <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest px-1">Select Colleagues</label>
-              <div className="relative group">
-                <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-primary transition-colors" />
-                <input 
-                  type="text" 
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  placeholder="Search by name or functional role..." 
-                  className="w-full bg-slate-50 border border-slate-100 rounded-2xl pl-12 pr-4 py-4 text-sm font-bold outline-none focus:bg-white focus:border-primary/30 focus:ring-4 focus:ring-primary/5 transition-all" 
-                />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 {filteredColleagues.map(c => (
-                   <div 
-                    key={c.id} 
-                    onClick={() => toggleColleague(c.id)} 
-                    className={`p-5 border-2 rounded-3xl flex items-center space-x-4 cursor-pointer transition-all ${
-                      selectedColleagues.includes(c.id) 
-                        ? 'bg-primary/5 border-primary shadow-sm ring-1 ring-primary/10' 
-                        : 'bg-white border-slate-100 hover:border-slate-300'
-                    }`}
-                   >
-                      <img src={c.avatar} className="w-10 h-10 rounded-2xl object-cover shadow-sm" alt={c.name} />
-                      <div className="min-w-0">
-                         <p className="text-sm font-black text-slate-900 truncate">{c.name}</p>
-                         <p className="text-[10px] text-slate-400 font-bold uppercase truncate tracking-tight">{c.role}</p>
-                      </div>
-                      {selectedColleagues.includes(c.id) && <CheckCircle2 size={18} className="text-primary ml-auto animate-in zoom-in-95" />}
-                   </div>
-                 ))}
-                 {filteredColleagues.length === 0 && (
-                   <div className="col-span-2 py-10 text-center text-slate-400 font-bold italic">No colleagues found matching "{searchQuery}"</div>
-                 )}
-              </div>
-           </div>
-
-           <div className="space-y-6">
-              <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest px-1">Focus Objectives</label>
-              <div className="space-y-3">
-                 {objectives.map((obj: any) => (
-                    <div 
-                      key={obj.id} 
-                      onClick={() => toggleObj(obj.id)} 
-                      className={`p-5 border-2 rounded-[1.5rem] flex items-center justify-between cursor-pointer transition-all ${
-                        selectedObjs.includes(obj.id) 
-                          ? 'bg-primary/5 border-primary shadow-sm' 
-                          : 'bg-white border-slate-100 hover:border-slate-300'
-                      }`}
-                    >
-                       <div className="flex items-center space-x-4">
-                          <div className={`p-2 rounded-full border-2 transition-all ${selectedObjs.includes(obj.id) ? 'bg-primary border-primary text-white' : 'bg-slate-50 border-slate-100 text-slate-300'}`}>
-                             <Target size={18} />
-                          </div>
-                          <span className="text-sm font-bold text-slate-700 tracking-tight">{obj.title}</span>
-                       </div>
-                    </div>
-                 ))}
-              </div>
-           </div>
-
-           <div className="space-y-6">
-              <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest px-1">Contextual Message</label>
-              <div className="relative group">
-                <textarea 
-                  placeholder="e.g. Seeking specific feedback on my strategic contributions to the API project..." 
-                  className="w-full bg-white text-slate-900 border border-slate-200 rounded-[2rem] p-8 text-sm font-medium outline-none focus:ring-4 focus:ring-primary/20 transition-all h-48 resize-none shadow-inner placeholder:text-slate-400" 
-                />
-                <div className="absolute bottom-6 right-6 opacity-30 group-focus-within:opacity-100 transition-opacity">
-                   <Sparkles size={20} className="text-primary" />
-                </div>
-              </div>
-           </div>
-        </div>
-
-        <div className="p-10 border-t border-slate-100 bg-white flex items-center justify-end space-x-6">
-           <button onClick={onClose} className="px-8 py-3 text-sm font-black text-slate-400 hover:text-slate-800 transition-colors uppercase tracking-widest">Discard</button>
-           <button 
-            onClick={onClose} 
-            disabled={selectedColleagues.length === 0} 
-            className="px-14 py-4 bg-primary/20 text-primary border border-primary/10 rounded-2xl text-sm font-black uppercase tracking-widest shadow-xl shadow-primary/5 hover:bg-primary hover:text-white transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-           >
-             Send Request
-           </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 const TakeAppraisalWorkspace = ({ onClose, objectives }: any) => {
   const [currentIdx, setCurrentIdx] = useState(0);
   const activeObj = objectives[currentIdx];
@@ -1221,6 +1222,9 @@ const KREvaluationCard = ({ title, target, current, unit }: any) => {
 
 // -- Helpers --
 
+/**
+ * AnchorGroup helper component
+ */
 const AnchorGroup = ({ title, desc, icon, onClick, count }: any) => (
   <div onClick={onClick} className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm hover:shadow-md hover:border-primary/20 transition-all cursor-pointer group flex items-center justify-between">
     <div className="flex items-center space-x-6">
@@ -1241,6 +1245,9 @@ const AnchorGroup = ({ title, desc, icon, onClick, count }: any) => (
   </div>
 );
 
+/**
+ * SummaryCard helper component
+ */
 const SummaryCard = ({ label, value, trend, icon }: any) => (
   <div className="bg-white border border-slate-200 p-6 rounded-3xl shadow-sm h-full flex flex-col justify-between group hover:shadow-md transition-all">
     <div className="flex justify-between items-start mb-4">
@@ -1254,6 +1261,9 @@ const SummaryCard = ({ label, value, trend, icon }: any) => (
   </div>
 );
 
+/**
+ * TabButton helper component
+ */
 const TabButton = ({ active, onClick, icon, label }: any) => (
   <button onClick={onClick} className={`flex items-center space-x-2 px-5 py-2.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap shrink-0 ${active ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}>
     {icon}
@@ -1261,6 +1271,9 @@ const TabButton = ({ active, onClick, icon, label }: any) => (
   </button>
 );
 
+/**
+ * PersistentAcknowledgmentSection component
+ */
 const PersistentAcknowledgmentSection = ({ signOff, onSign }: { signOff: any, onSign: () => void }) => {
   return (
     <div className="bg-white border border-slate-200 rounded-[2.5rem] shadow-sm overflow-hidden flex flex-col h-fit animate-in slide-in-from-right duration-400">
@@ -1310,6 +1323,9 @@ const PersistentAcknowledgmentSection = ({ signOff, onSign }: { signOff: any, on
   );
 };
 
+/**
+ * SignatureStatusBadge helper component
+ */
 const SignatureStatusBadge = ({ label, signed }: { label: string, signed: boolean }) => (
   <div className="flex flex-col items-center space-y-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
      <div className={`w-10 h-10 rounded-full border-2 flex items-center justify-center transition-all ${signed ? 'bg-green-100 border-green-200 text-green-600 shadow-lg shadow-green-100' : 'bg-white border-slate-200 text-slate-200'}`}>
@@ -1319,6 +1335,9 @@ const SignatureStatusBadge = ({ label, signed }: { label: string, signed: boolea
   </div>
 );
 
+/**
+ * CycleSignatureModal component
+ */
 const CycleSignatureModal = ({ cycleName, onClose, onConfirm }: { cycleName: string, onClose: () => void, onConfirm: (comment: string, sig: string) => void }) => {
   const [comment, setComment] = useState('');
   const [signature, setSignature] = useState('');
@@ -1396,6 +1415,9 @@ const CycleSignatureModal = ({ cycleName, onClose, onConfirm }: { cycleName: str
   );
 };
 
+/**
+ * OKRDetailView component
+ */
 const OKRDetailView = ({ objectives }: { objectives: any[] }) => (
   <div className="space-y-4">
     {objectives.map(obj => (
@@ -1437,6 +1459,9 @@ const OKRDetailView = ({ objectives }: { objectives: any[] }) => (
   </div>
 );
 
+/**
+ * KPIDetailView component
+ */
 const KPIDetailView = ({ objectives }: { objectives: any[] }) => (
   <div className="space-y-4">
     {objectives.map(obj => (
@@ -1470,6 +1495,9 @@ const KPIDetailView = ({ objectives }: { objectives: any[] }) => (
   </div>
 );
 
+/**
+ * IDPDetailView component
+ */
 const IDPDetailView = ({ goals }: { goals: any[] }) => (
   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
     {goals.map(goal => (
@@ -1498,6 +1526,9 @@ const IDPDetailView = ({ goals }: { goals: any[] }) => (
   </div>
 );
 
+/**
+ * StatusBadge helper component
+ */
 const StatusBadge = ({ status, mini }: { status: string, mini?: boolean }) => {
   const styles: any = {
     'Active': 'bg-blue-100 text-blue-700',

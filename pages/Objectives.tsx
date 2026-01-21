@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { 
   Table as TableIcon, 
   Search, 
@@ -36,7 +36,8 @@ import {
   HelpCircle,
   FileText,
   Workflow,
-  AlertTriangle
+  AlertTriangle,
+  Check
 } from 'lucide-react';
 import Pagination from '../components/common/Pagination';
 import { UserRole } from '../types';
@@ -467,7 +468,11 @@ const DefineObjectiveWizard = ({ type, onClose }: { type: 'Individual' | 'Depart
     { id: '1', title: '', weight: 0, tracking: 'Periodic Review', scoring: 'Percentage', start: 0, target: 100 }
   ]);
 
-  const frameworks = ['OKR', 'BSC', 'SMART', 'Project based', 'Individual Development Goal'];
+  // Dropdown states
+  const [isParentDropdownOpen, setIsParentDropdownOpen] = useState(false);
+  const [parentSearch, setParentSearch] = useState('');
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
   const scoringMethods = ['Number', 'Percentage', '5-Point Scale', 'Star Rating'];
   
   // Dynamic Parent Selection Options based on type
@@ -475,7 +480,24 @@ const DefineObjectiveWizard = ({ type, onClose }: { type: 'Individual' | 'Depart
     ? MOCK_OBJECTIVES.filter(o => o.level === 'Department')
     : type === 'Department'
       ? MOCK_OBJECTIVES.filter(o => o.level === 'Global')
-      : []; // Global goals don't have parents in this simple hierarchy
+      : [];
+
+  const filteredParents = parentOptions.filter(p => 
+    p.title.toLowerCase().includes(parentSearch.toLowerCase()) || 
+    p.code.toLowerCase().includes(parentSearch.toLowerCase())
+  );
+
+  const selectedParentObj = parentOptions.find(p => p.code === formData.parentGoal);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsParentDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const addKR = () => {
     setKrs([...krs, { id: Date.now().toString(), title: '', weight: 0, tracking: 'Periodic Review', scoring: 'Percentage', start: 0, target: 100 }]);
@@ -505,35 +527,24 @@ const DefineObjectiveWizard = ({ type, onClose }: { type: 'Individual' | 'Depart
               </div>
               <div>
                  <h3 className="text-2xl font-black text-slate-900 tracking-tight uppercase leading-none">Define {type} Objective</h3>
-                 <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1.5 flex items-center">
-                    Step {step} of 2 <span className="mx-2 opacity-30">•</span> {step === 1 ? 'Strategic Context' : 'Performance Vectors'}
-                 </p>
+                 <div className="flex items-center space-x-3 mt-1.5">
+                    <span className="text-xs text-slate-500 font-bold uppercase tracking-widest flex items-center">
+                       Step {step} of 2 <span className="mx-2 opacity-30">•</span> {step === 1 ? 'Strategic Context' : 'Performance Vectors'}
+                    </span>
+                    <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
+                    <span className="px-2 py-0.5 bg-primary/10 text-primary rounded text-[9px] font-black uppercase tracking-widest">
+                       {formData.framework} Framework Deployed
+                    </span>
+                 </div>
               </div>
            </div>
            <button onClick={onClose} className="p-3 text-slate-400 hover:bg-white rounded-2xl transition-all shadow-sm hover:text-slate-600"><X size={28}/></button>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-12 space-y-12 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto p-12 space-y-12 custom-scrollbar bg-white">
            {step === 1 && (
-             <div className="space-y-10 animate-in slide-in-from-right duration-400">
-                {/* Framework Selection */}
-                <div className="space-y-6">
-                   <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] px-1 border-l-4 border-primary pl-4">Institutional Framework</label>
-                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-                      {frameworks.map(fw => (
-                        <button 
-                          key={fw}
-                          onClick={() => setFormData({...formData, framework: fw})}
-                          className={`p-4 rounded-2xl border-2 transition-all text-center flex flex-col items-center justify-center space-y-2 ${formData.framework === fw ? 'bg-primary text-white border-primary shadow-lg ring-4 ring-primary/10' : 'bg-white border-slate-100 text-slate-500 hover:border-slate-300'}`}
-                        >
-                           {fw === 'OKR' ? <Target size={20} /> : fw === 'BSC' ? <Layers size={20} /> : fw === 'SMART' ? <Zap size={20} /> : fw === 'Project based' ? <Workflow size={20} /> : <Activity size={20} />}
-                           <span className="text-[9px] font-black uppercase leading-tight tracking-tight">{fw}</span>
-                        </button>
-                      ))}
-                   </div>
-                </div>
-
+             <div className="space-y-12 animate-in slide-in-from-right duration-400">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                    <div className="space-y-6">
                       <div className="space-y-2">
@@ -585,39 +596,74 @@ const DefineObjectiveWizard = ({ type, onClose }: { type: 'Individual' | 'Depart
                       </div>
 
                       {type !== 'Global' && (
-                        <div className="space-y-3">
+                        <div className="space-y-3 relative" ref={dropdownRef}>
                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Vertical Alignment (Compulsory)</label>
-                           <div className="space-y-2">
-                              {parentOptions.map(opt => (
-                                <button 
-                                  key={opt.id}
-                                  onClick={() => setFormData({...formData, parentGoal: opt.code})}
-                                  className={`w-full p-4 border-2 rounded-2xl flex items-center justify-between transition-all text-left ${formData.parentGoal === opt.code ? 'bg-primary/5 border-primary shadow-sm' : 'bg-white border-slate-100 hover:border-slate-300'}`}
-                                >
-                                   <div className="flex items-center space-x-3">
-                                      <div className={`p-2 rounded-lg ${formData.parentGoal === opt.code ? 'bg-primary text-white' : 'bg-slate-50 text-slate-400'}`}>
-                                         <LinkIcon size={14} />
-                                      </div>
-                                      <div>
-                                         <p className="text-xs font-black uppercase text-slate-900 leading-none">{opt.code}</p>
-                                         <p className="text-[10px] text-slate-500 font-bold truncate max-w-[240px] mt-1">{opt.title}</p>
-                                      </div>
+                           <div 
+                              onClick={() => setIsParentDropdownOpen(!isParentDropdownOpen)}
+                              className={`w-full p-5 border-2 rounded-2xl flex items-center justify-between cursor-pointer transition-all ${isParentDropdownOpen ? 'border-primary bg-white shadow-lg ring-4 ring-primary/5' : 'bg-slate-50 border-slate-100 hover:border-slate-300'}`}
+                           >
+                              {selectedParentObj ? (
+                                <div className="flex items-center space-x-3">
+                                   <div className="p-2 bg-primary text-white rounded-lg shadow-sm">
+                                      <LinkIcon size={14} />
                                    </div>
-                                   {formData.parentGoal === opt.code && <CheckCircle2 size={18} className="text-primary" />}
-                                </button>
-                              ))}
+                                   <div>
+                                      <p className="text-[10px] font-black uppercase text-slate-900 leading-none">{selectedParentObj.code}</p>
+                                      <p className="text-xs font-bold text-slate-700 mt-1 line-clamp-1">{selectedParentObj.title}</p>
+                                   </div>
+                                </div>
+                              ) : (
+                                <span className="text-sm font-bold text-slate-400">Select a parent anchor...</span>
+                              )}
+                              <ChevronDown size={18} className={`text-slate-400 transition-transform ${isParentDropdownOpen ? 'rotate-180' : ''}`} />
                            </div>
+
+                           {isParentDropdownOpen && (
+                             <div className="absolute top-full left-0 right-0 mt-3 bg-white border border-slate-100 shadow-[0_20px_50px_rgba(0,0,0,0.15)] rounded-3xl z-50 p-3 animate-in fade-in zoom-in-95 duration-100">
+                                <div className="relative mb-3">
+                                   <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                                   <input 
+                                      autoFocus
+                                      value={parentSearch}
+                                      onChange={e => setParentSearch(e.target.value)}
+                                      placeholder="Search objective code or title..."
+                                      className="w-full bg-slate-50 border-none rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold focus:ring-2 focus:ring-primary/20 outline-none"
+                                   />
+                                </div>
+                                <div className="max-h-60 overflow-y-auto custom-scrollbar space-y-1">
+                                   {filteredParents.map(opt => (
+                                     <button 
+                                       key={opt.id}
+                                       onClick={() => {
+                                          setFormData({...formData, parentGoal: opt.code});
+                                          setIsParentDropdownOpen(false);
+                                       }}
+                                       className={`w-full p-4 rounded-xl flex items-center justify-between transition-all text-left group ${formData.parentGoal === opt.code ? 'bg-primary text-white' : 'hover:bg-slate-50'}`}
+                                     >
+                                        <div className="flex items-center space-x-3">
+                                           <span className={`text-[10px] font-mono font-black w-14 ${formData.parentGoal === opt.code ? 'text-white' : 'text-slate-400'}`}>{opt.code}</span>
+                                           <span className="text-xs font-bold truncate pr-4">{opt.title}</span>
+                                        </div>
+                                        {formData.parentGoal === opt.code && <Check size={16} />}
+                                     </button>
+                                   ))}
+                                   {filteredParents.length === 0 && (
+                                     <div className="py-8 text-center text-slate-400 text-[10px] font-bold uppercase italic">No matches found</div>
+                                   )}
+                                </div>
+                             </div>
+                           )}
                         </div>
                       )}
                       
                       {type === 'Global' && (
-                        <div className="p-6 bg-slate-50 border border-slate-100 rounded-3xl space-y-4">
+                        <div className="p-8 bg-slate-50 border border-slate-100 rounded-[2rem] space-y-4">
                            <div className="flex items-center space-x-3 text-amber-600">
-                              <Target size={20} />
+                              <Target size={24} />
                               <span className="text-xs font-black uppercase tracking-widest">Tier 0: Strategic Root</span>
                            </div>
-                           <p className="text-[11px] text-slate-500 font-medium leading-relaxed italic">
-                              Global objectives represent the ultimate institutional anchors. They do not require a parent for alignment but will act as parents for departmental cascades.
+                           <p className="text-xs text-slate-500 font-medium leading-relaxed italic">
+                              Global objectives represent the ultimate institutional anchors. They do not require a parent for alignment but will act as parents for departmental cascades org-wide.
                            </p>
                         </div>
                       )}
@@ -654,7 +700,7 @@ const DefineObjectiveWizard = ({ type, onClose }: { type: 'Individual' | 'Depart
                                      value={kr.title}
                                      onChange={e => updateKR(kr.id, 'title', e.target.value)}
                                      placeholder="e.g. Reduce average response time by 40ms"
-                                     className="w-full bg-white border-2 border-slate-100 rounded-2xl px-6 py-4 font-bold text-base outline-none focus:border-primary shadow-sm"
+                                     className="w-full bg-white text-slate-900 border-2 border-slate-100 rounded-2xl px-6 py-4 font-bold text-base outline-none focus:border-primary shadow-sm"
                                   />
                                </div>
                                
@@ -664,7 +710,7 @@ const DefineObjectiveWizard = ({ type, onClose }: { type: 'Individual' | 'Depart
                                      <select 
                                         value={kr.scoring}
                                         onChange={e => updateKR(kr.id, 'scoring', e.target.value)}
-                                        className="w-full bg-white border-2 border-slate-100 rounded-2xl px-5 py-3.5 text-sm font-bold outline-none focus:border-primary appearance-none"
+                                        className="w-full bg-white text-slate-900 border-2 border-slate-100 rounded-2xl px-5 py-3.5 text-sm font-bold outline-none focus:border-primary appearance-none"
                                      >
                                         {scoringMethods.map(m => <option key={m}>{m}</option>)}
                                      </select>
@@ -674,7 +720,7 @@ const DefineObjectiveWizard = ({ type, onClose }: { type: 'Individual' | 'Depart
                                      <select 
                                         value={kr.tracking}
                                         onChange={e => updateKR(kr.id, 'tracking', e.target.value)}
-                                        className="w-full bg-white border-2 border-slate-100 rounded-2xl px-5 py-3.5 text-sm font-bold outline-none focus:border-primary appearance-none"
+                                        className="w-full bg-white text-slate-900 border-2 border-slate-100 rounded-2xl px-5 py-3.5 text-sm font-bold outline-none focus:border-primary appearance-none"
                                      >
                                         <option>Periodic Review</option>
                                         <option>Real-time (RKT Integration)</option>
@@ -690,7 +736,7 @@ const DefineObjectiveWizard = ({ type, onClose }: { type: 'Individual' | 'Depart
                                      type="number"
                                      value={kr.weight}
                                      onChange={e => updateKR(kr.id, 'weight', parseInt(e.target.value) || 0)}
-                                     className="w-full bg-white border-2 border-slate-100 rounded-2xl px-6 py-4 font-black outline-none focus:border-primary text-center shadow-sm"
+                                     className="w-full bg-white text-slate-900 border-2 border-slate-100 rounded-2xl px-6 py-4 font-black outline-none focus:border-primary text-center shadow-sm"
                                   />
                                </div>
 
@@ -701,7 +747,7 @@ const DefineObjectiveWizard = ({ type, onClose }: { type: 'Individual' | 'Depart
                                         type="number"
                                         value={kr.start}
                                         onChange={e => updateKR(kr.id, 'start', parseFloat(e.target.value) || 0)}
-                                        className="w-full bg-white border-2 border-slate-100 rounded-2xl px-4 py-3 font-bold outline-none focus:border-primary text-center shadow-sm"
+                                        className="w-full bg-white text-slate-900 border-2 border-slate-100 rounded-2xl px-4 py-3 font-bold outline-none focus:border-primary text-center shadow-sm"
                                      />
                                   </div>
                                   <div className="space-y-2">
@@ -710,29 +756,12 @@ const DefineObjectiveWizard = ({ type, onClose }: { type: 'Individual' | 'Depart
                                         type="number"
                                         value={kr.target}
                                         onChange={e => updateKR(kr.id, 'target', parseFloat(e.target.value) || 0)}
-                                        className="w-full bg-white border-2 border-slate-100 rounded-2xl px-4 py-3 font-bold outline-none focus:border-primary text-center shadow-sm"
+                                        className="w-full bg-white text-slate-900 border-2 border-slate-100 rounded-2xl px-4 py-3 font-bold outline-none focus:border-primary text-center shadow-sm"
                                      />
                                   </div>
                                </div>
                             </div>
                          </div>
-
-                         {kr.tracking === 'Real-time (RKT Integration)' && (
-                           <div className="pt-6 border-t border-slate-200 flex items-center space-x-4 animate-in fade-in duration-300">
-                              <div className="flex items-center space-x-2 text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-xl border border-indigo-100">
-                                 <Zap size={14} fill="currentColor" />
-                                 <span className="text-[10px] font-black uppercase tracking-widest">RKT Node Link required</span>
-                              </div>
-                              <button className="text-[10px] font-bold text-slate-400 hover:text-primary underline uppercase tracking-widest">Select Integration Source</button>
-                           </div>
-                         )}
-
-                         {kr.scoring === 'Star Rating' && (
-                           <div className="pt-6 border-t border-slate-200 flex items-center space-x-2 text-amber-500 animate-in zoom-in-95">
-                              {[1, 2, 3, 4, 5].map(s => <Star key={s} size={18} fill={s <= 3 ? 'currentColor' : 'none'} strokeWidth={2} />)}
-                              <span className="text-[10px] font-black uppercase text-slate-400 ml-4 tracking-widest">Visual Feedback Scale Enabled</span>
-                           </div>
-                         )}
                       </div>
                    ))}
                 </div>

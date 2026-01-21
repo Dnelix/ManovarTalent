@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { 
   ShieldAlert, 
@@ -63,7 +64,10 @@ import {
   Waypoints,
   GitMerge,
   UserCheck,
-  MoveDown
+  MoveDown,
+  Workflow,
+  Star,
+  Binary
 } from 'lucide-react';
 
 type CycleStatus = 'Upcoming' | 'Active' | 'Closed';
@@ -85,7 +89,7 @@ interface TemplateComponent {
   id: string;
   name: string;
   weight: number;
-  type: 'OKR' | 'KPI' | 'Competency' | 'Feedback';
+  type: 'OKR' | 'KPI' | 'Competency' | 'Feedback' | 'SMART' | 'BSC' | 'Project' | 'IDG';
 }
 
 interface RatingTemplate {
@@ -93,6 +97,7 @@ interface RatingTemplate {
   name: string;
   desc: string;
   usage: string;
+  framework: string;
   components: string[];
   logicDetails?: TemplateComponent[];
 }
@@ -162,7 +167,7 @@ const INITIAL_WORKFLOWS: ReviewWorkflow[] = [
     steps: [
       { id: 'ws4', label: 'Self-Appraisal', actor: 'Employee', duration: 5, type: 'Input', isMandatory: true },
       { id: 'ws5', label: 'Manager Alignment', actor: 'Manager', duration: 7, type: 'Review', isMandatory: true },
-      { id: 'ws6', label: 'HR Calibration Audit', actor: 'HR View', duration: 5, type: 'Approval', isMandatory: true },
+      { id: 'ws6', label: 'HR Calibration Audit', actor: 'HR view', duration: 5, type: 'Approval', isMandatory: true },
       { id: 'ws7', label: 'Board Level Visibility', actor: 'Executives', duration: 5, type: 'Review', isMandatory: false },
       { id: 'ws8', label: 'Final Acknowledgment', actor: 'Employee', duration: 3, type: 'Acknowledgment', isMandatory: true },
     ]
@@ -210,6 +215,7 @@ const INITIAL_RATING_TEMPLATES: RatingTemplate[] = [
     name: 'Standard Executive (5-Point)', 
     desc: 'Balanced OKR/Behavioral model used for general management and individual leadership.', 
     usage: '85%', 
+    framework: 'OKR',
     components: ['OKRs', 'Competencies', 'Peer Feedback'],
     logicDetails: [
       { id: 'l1', name: 'Strategic Objectives', weight: 40, type: 'OKR' },
@@ -222,6 +228,7 @@ const INITIAL_RATING_TEMPLATES: RatingTemplate[] = [
     name: 'Sales Attainment (100-Point)', 
     desc: 'Strict quantitative metric focus for revenue-generating roles.', 
     usage: '12%', 
+    framework: 'Project',
     components: ['KPIs', 'Quota Metrics'],
     logicDetails: [
       { id: 'l4', name: 'Quota Attainment', weight: 70, type: 'KPI' },
@@ -233,6 +240,7 @@ const INITIAL_RATING_TEMPLATES: RatingTemplate[] = [
     name: 'Binary Engineering Pass/Fail', 
     desc: 'Critical systems performance model focusing on uptime and reliability SLAs.', 
     usage: '3%', 
+    framework: 'SMART',
     components: ['System Stability', 'Ticket SLAs'],
     logicDetails: [
       { id: 'l6', name: 'Uptime (SLO)', weight: 80, type: 'KPI' },
@@ -430,7 +438,8 @@ const PolicyStudioPage: React.FC = () => {
                              <button className="p-2 text-slate-300 hover:text-red-500"><Trash2 size={16} /></button>
                           </div>
                        </div>
-                       <h4 className="text-lg font-bold text-slate-900 mb-2 uppercase tracking-tight">{template.name}</h4>
+                       <h4 className="text-lg font-bold text-slate-900 mb-1 uppercase tracking-tight">{template.name}</h4>
+                       <span className="inline-block px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded text-[8px] font-black uppercase tracking-widest mb-3 self-start">{template.framework} Framework</span>
                        <p className="text-xs text-slate-500 leading-relaxed font-medium mb-6 flex-1 italic">"{template.desc}"</p>
                        
                        <div className="space-y-4 pt-6 border-t border-slate-50">
@@ -724,652 +733,26 @@ const PolicyStudioPage: React.FC = () => {
 };
 
 /**
- * Workflow Designer Wizard
+ * Build Template Wizard - Enhanced to include Goal Framework Strategy
  */
-const WorkflowDesignerWizard = ({ workflow, onSave, onClose }: { workflow: ReviewWorkflow | null, onSave: (w: ReviewWorkflow) => void, onClose: () => void }) => {
-   const [formData, setFormData] = useState({
-      id: workflow?.id || `w-${Date.now()}`,
-      name: workflow?.name || '',
-      desc: workflow?.desc || '',
-      isDefault: workflow?.isDefault || false,
-      steps: workflow?.steps || [
-         { id: '1', label: 'Self-Appraisal', actor: 'Employee', duration: 7, type: 'Input', isMandatory: true }
-      ]
-   });
-
-   const addStep = () => {
-      setFormData({
-         ...formData,
-         steps: [...formData.steps, { id: `ws-${Date.now()}`, label: 'New Stage', actor: 'Manager', duration: 5, type: 'Review', isMandatory: true }]
-      });
-   };
-
-   const removeStep = (id: string) => {
-      if (formData.steps.length === 1) return;
-      setFormData({
-         ...formData,
-         steps: formData.steps.filter(s => s.id !== id)
-      });
-   };
-
-   const updateStep = (id: string, field: string, value: any) => {
-      setFormData({
-         ...formData,
-         steps: formData.steps.map(s => s.id === id ? { ...s, [field]: value } : s)
-      });
-   };
-
-   return (
-      <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-         <div className="bg-white rounded-[2.5rem] w-full max-w-4xl shadow-2xl overflow-hidden border border-slate-200 flex flex-col max-h-[90vh]">
-            <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-               <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg">
-                     <Waypoints size={24}/>
-                  </div>
-                  <div>
-                     <h3 className="text-xl font-bold text-slate-900 tracking-tight uppercase leading-none">{workflow ? 'Edit Pipeline' : 'Workflow Architect'}</h3>
-                     <p className="text-xs text-slate-500 mt-1">Institutional Review & Approval Logic</p>
-                  </div>
-               </div>
-               <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 transition-colors"><X size={24}/></button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-10 space-y-12 custom-scrollbar">
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pb-12 border-b border-slate-100">
-                  <div className="space-y-4">
-                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Logic Designation</label>
-                     <input 
-                        value={formData.name}
-                        onChange={e => setFormData({...formData, name: e.target.value})}
-                        placeholder="e.g. Sales Unit Q3 Pipeline"
-                        className="w-full border-2 border-slate-100 rounded-2xl px-6 py-4 font-bold text-lg outline-none focus:border-indigo-600 transition-all shadow-inner"
-                     />
-                     <textarea 
-                        value={formData.desc}
-                        onChange={e => setFormData({...formData, desc: e.target.value})}
-                        placeholder="Strategic context for this workflow..."
-                        className="w-full border-2 border-slate-100 rounded-2xl px-6 py-4 text-sm outline-none focus:border-indigo-600 transition-all shadow-inner resize-none h-24"
-                     />
-                  </div>
-                  <div className="bg-slate-900 rounded-[2rem] p-8 text-white relative overflow-hidden group">
-                     <div className="absolute top-0 right-0 p-4 opacity-10"><Brain size={60} className="text-indigo-400" /></div>
-                     <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-4">Architect Insight</h4>
-                     <p className="text-xs text-slate-400 leading-relaxed font-medium italic">
-                        "Workflows ensure compliance with SOC-2 standards by enforcing temporal locks and specific actor authorizations at each milestone."
-                     </p>
-                     <div className="mt-8 flex items-center space-x-3">
-                        <input 
-                           type="checkbox" 
-                           id="isDefault" 
-                           checked={formData.isDefault} 
-                           onChange={e => setFormData({...formData, isDefault: e.target.checked})}
-                           className="w-4 h-4 rounded border-slate-700 bg-slate-800 text-indigo-600 focus:ring-indigo-500" 
-                        />
-                        <label htmlFor="isDefault" className="text-[10px] font-black uppercase tracking-widest text-slate-300">Set as Global Default</label>
-                     </div>
-                  </div>
-               </div>
-
-               <div className="space-y-8">
-                  <div className="flex items-center justify-between">
-                     <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest">Pipeline Visualization ({formData.steps.length} Stages)</h4>
-                     <button 
-                        onClick={addStep}
-                        className="text-xs font-bold text-indigo-600 flex items-center space-x-1.5 p-2 bg-indigo-50 rounded-xl hover:bg-indigo-100 transition-all"
-                     >
-                        <Plus size={14} />
-                        <span>Inject Stage</span>
-                     </button>
-                  </div>
-
-                  <div className="space-y-4">
-                     {formData.steps.map((step, idx) => (
-                        <div key={step.id} className="relative">
-                           {idx > 0 && <div className="flex justify-center my-2 text-slate-200"><MoveDown size={20} /></div>}
-                           <div className="p-6 bg-white border-2 border-slate-100 rounded-3xl flex flex-col md:flex-row items-center gap-6 group hover:border-indigo-600 transition-all shadow-sm">
-                              <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-400 font-black group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-inner shrink-0">
-                                 {idx + 1}
-                              </div>
-                              <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-4 w-full">
-                                 <div className="space-y-1.5">
-                                    <label className="text-[8px] font-black text-slate-400 uppercase">Stage Label</label>
-                                    <input 
-                                       value={step.label}
-                                       onChange={e => updateStep(step.id, 'label', e.target.value)}
-                                       className="w-full bg-slate-50 border-none rounded-lg px-3 py-1.5 text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-200"
-                                    />
-                                 </div>
-                                 <div className="space-y-1.5">
-                                    <label className="text-[8px] font-black text-slate-400 uppercase">Assignee Tier</label>
-                                    <select 
-                                       value={step.actor}
-                                       onChange={e => updateStep(step.id, 'actor', e.target.value)}
-                                       className="w-full bg-slate-50 border-none rounded-lg px-3 py-1.5 text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-200"
-                                    >
-                                       <option>Employee</option>
-                                       <option>Manager</option>
-                                       <option>HR View</option>
-                                       <option>Executives</option>
-                                    </select>
-                                 </div>
-                                 <div className="space-y-1.5">
-                                    <label className="text-[8px] font-black text-slate-400 uppercase">Stage Type</label>
-                                    <select 
-                                       value={step.type}
-                                       onChange={e => updateStep(step.id, 'type', e.target.value)}
-                                       className="w-full bg-slate-50 border-none rounded-lg px-3 py-1.5 text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-200"
-                                    >
-                                       <option>Input</option>
-                                       <option>Review</option>
-                                       <option>Approval</option>
-                                       <option>Acknowledgment</option>
-                                    </select>
-                                 </div>
-                                 <div className="space-y-1.5">
-                                    <label className="text-[8px] font-black text-slate-400 uppercase">Lockout Delay (Days)</label>
-                                    <input 
-                                       type="number"
-                                       value={step.duration}
-                                       onChange={e => updateStep(step.id, 'duration', parseInt(e.target.value) || 0)}
-                                       className="w-full bg-slate-50 border-none rounded-lg px-3 py-1.5 text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-200"
-                                    />
-                                 </div>
-                              </div>
-                              <button 
-                                 onClick={() => removeStep(step.id)}
-                                 className="p-3 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-2xl transition-all"
-                              >
-                                 <Trash2 size={18} />
-                              </button>
-                           </div>
-                        </div>
-                     ))}
-                  </div>
-               </div>
-            </div>
-
-            <div className="p-8 border-t border-slate-100 bg-slate-50 flex items-center justify-end space-x-3">
-               <button onClick={onClose} className="px-6 py-2.5 text-sm font-bold text-slate-500">Discard</button>
-               <button 
-                  disabled={!formData.name}
-                  onClick={() => onSave(formData as any)}
-                  className="px-10 py-3 bg-indigo-600 text-white rounded-2xl text-sm font-black uppercase tracking-widest shadow-xl shadow-indigo-200 hover:scale-[1.02] active:scale-95 transition-all"
-               >
-                  Authorize Workflow
-               </button>
-            </div>
-         </div>
-      </div>
-   );
-};
-
-/**
- * Create Performance Cycle Wizard
- */
-const CreateCycleWizard = ({ onAdd, onClose, templates }: { onAdd: (c: PerformanceCycle) => void, onClose: () => void, templates: RatingTemplate[] }) => {
+const BuildTemplateWizard = ({ onAdd, onClose }: { onAdd: (t: RatingTemplate) => void, onClose: () => void }) => {
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     name: '',
-    description: '',
-    template: templates[0]?.name || '',
-    start: '',
-    end: '',
-    participants: 150
-  });
-
-  const handleSubmit = () => {
-    onAdd({
-      id: `c${Date.now()}`,
-      ...formData,
-      status: 'Upcoming',
-    });
-  };
-
-  return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-      <div className="bg-white rounded-[2.5rem] w-full max-w-xl shadow-2xl overflow-hidden border border-slate-200 flex flex-col max-h-[90vh]">
-        <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-          <div className="flex items-center space-x-4">
-            <div className="w-12 h-12 bg-primary text-white rounded-2xl flex items-center justify-center shadow-lg shadow-primary/20">
-              <CalendarClock size={24}/>
-            </div>
-            <div>
-              <h3 className="text-xl font-bold text-slate-900 tracking-tight uppercase leading-none">Cycle Scheduler</h3>
-              <p className="text-xs text-slate-500 mt-1 uppercase tracking-widest font-bold">Step {step} of 3</p>
-            </div>
-          </div>
-          <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 transition-colors"><X size={24}/></button>
-        </div>
-
-        <div className="p-8 space-y-8 overflow-y-auto custom-scrollbar">
-           {step === 1 && (
-             <div className="space-y-6 animate-in slide-in-from-right duration-300">
-               <div className="space-y-3">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Cycle Designation</label>
-                  <input 
-                    value={formData.name}
-                    onChange={e => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="e.g. Q4 Growth Calibration"
-                    className="w-full bg-white text-slate-900 border-2 border-slate-100 rounded-2xl px-6 py-4 font-bold text-lg outline-none focus:border-primary transition-all shadow-inner"
-                  />
-               </div>
-               <div className="space-y-3">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Institutional Description</label>
-                  <textarea 
-                    value={formData.description}
-                    onChange={e => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="Provide the purpose and context for this performance window..."
-                    className="w-full bg-white text-slate-900 border-2 border-slate-100 rounded-2xl px-6 py-4 text-sm font-medium outline-none focus:border-primary transition-all shadow-inner resize-none h-24"
-                  />
-               </div>
-             </div>
-           )}
-
-           {step === 2 && (
-             <div className="space-y-6 animate-in slide-in-from-right duration-300">
-               <div className="space-y-3">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Execution Template</label>
-                  <div className="grid grid-cols-1 gap-3">
-                     {templates.map(t => (
-                        <button 
-                          key={t.id}
-                          onClick={() => setFormData({ ...formData, template: t.name })}
-                          className={`p-5 rounded-2xl border-2 transition-all text-left flex items-center justify-between ${
-                            formData.template === t.name ? 'bg-primary/5 border-primary shadow-sm' : 'bg-white border-slate-100 hover:border-slate-300'
-                          }`}
-                        >
-                           <div>
-                              <p className={`text-sm font-bold ${formData.template === t.name ? 'text-primary' : 'text-slate-800'}`}>{t.name}</p>
-                              <p className="text-[10px] text-slate-400 mt-1 font-medium">{t.usage} utilization across org</p>
-                           </div>
-                           {formData.template === t.name && <CheckCircle2 size={20} className="text-primary" />}
-                        </button>
-                     ))}
-                  </div>
-               </div>
-             </div>
-           )}
-
-           {step === 3 && (
-             <div className="space-y-6 animate-in slide-in-from-right duration-300">
-               <div className="grid grid-cols-2 gap-6">
-                  <div className="space-y-3">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Start Date</label>
-                    <input type="date" value={formData.start} onChange={e => setFormData({...formData, start: e.target.value})} className="w-full bg-white text-slate-900 border-2 border-slate-100 rounded-2xl px-6 py-4 font-bold outline-none focus:border-primary" />
-                  </div>
-                  <div className="space-y-3">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">End Date</label>
-                    <input type="date" value={formData.end} onChange={e => setFormData({...formData, end: e.target.value})} className="w-full bg-white text-slate-900 border-2 border-slate-100 rounded-2xl px-6 py-4 font-bold outline-none focus:border-primary" />
-                  </div>
-               </div>
-               <div className="p-6 bg-slate-900 rounded-[2rem] text-white space-y-4">
-                  <p className="text-[10px] font-black text-primary uppercase tracking-widest leading-none">Enrollment Estimate</p>
-                  <div className="flex items-center justify-between">
-                     <span className="text-2xl font-black">{formData.participants} Users</span>
-                     <button className="text-xs font-bold text-slate-400 hover:text-white underline">Edit Groups</button>
-                  </div>
-               </div>
-             </div>
-           )}
-        </div>
-
-        <div className="p-8 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
-           <button onClick={() => step > 1 ? setStep(step - 1) : onClose()} className="px-6 py-2.5 text-sm font-bold text-slate-500 hover:text-slate-800 transition-colors uppercase tracking-widest text-[11px]">
-              {step === 1 ? 'Cancel' : 'Previous'}
-           </button>
-           <button 
-            disabled={step === 1 && !formData.name}
-            onClick={() => step < 3 ? setStep(step + 1) : handleSubmit()}
-            className="px-10 py-3 bg-primary text-white rounded-2xl text-sm font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-30"
-           >
-              {step === 3 ? 'Deploy Cycle' : 'Next Step'}
-           </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-/**
- * Cycle Detail Drawer
- */
-const CycleDetailDrawer = ({ cycle, onClose }: { cycle: PerformanceCycle, onClose: () => void }) => {
-  const [isLaunching, setIsLaunching] = useState(false);
-  const [showPreferences, setShowPreferences] = useState(false);
-
-  const handleLaunch = () => {
-    setIsLaunching(true);
-    setTimeout(() => {
-      setIsLaunching(false);
-      onClose();
-    }, 1500);
-  };
-
-  return (
-    <>
-      <div className="fixed inset-0 z-[150] bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300" onClick={onClose}></div>
-      <div className="fixed top-0 right-0 bottom-0 w-full sm:w-[550px] bg-white z-[160] shadow-2xl flex flex-col animate-in slide-in-from-right duration-500 overflow-hidden">
-         <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-            <div className="flex items-center space-x-4">
-               <div className="w-12 h-12 bg-primary/10 text-primary rounded-2xl flex items-center justify-center shadow-inner"><Calendar size={24}/></div>
-               <div>
-                  <h3 className="text-xl font-bold text-slate-900 tracking-tight leading-none uppercase">{cycle.name}</h3>
-                  <span className="inline-block mt-2 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest bg-white border border-slate-100 shadow-sm text-slate-600">{cycle.status}</span>
-               </div>
-            </div>
-            <button onClick={onClose} className="p-2 text-slate-400 hover:bg-slate-200 rounded-lg transition-all"><X size={24}/></button>
-         </div>
-         
-         <div className="flex-1 overflow-y-auto p-8 space-y-10 custom-scrollbar">
-            <div className="space-y-4">
-               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Institutional Context</label>
-               <p className="text-sm text-slate-600 font-medium leading-relaxed italic">"{cycle.description}"</p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-               <div className="p-5 bg-slate-50 border border-slate-100 rounded-[1.5rem] shadow-sm">
-                  <p className="text-[9px] font-black text-slate-400 uppercase mb-2">Participant Pool</p>
-                  <p className="text-lg font-black text-slate-900">{cycle.participants} Users</p>
-               </div>
-               <div className="p-5 bg-slate-50 border border-slate-100 rounded-[1.5rem] shadow-sm">
-                  <p className="text-[9px] font-black text-slate-400 uppercase mb-2">Framework Logic</p>
-                  <p className="text-lg font-black text-slate-900 truncate">{cycle.template}</p>
-               </div>
-            </div>
-
-            <div className="space-y-6">
-               <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Cycle Health & Progress</h4>
-               <div className="p-8 bg-slate-900 rounded-[2.5rem] text-white shadow-xl relative overflow-hidden group border border-slate-800">
-                  <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
-                    <Activity size={80} className="text-primary" />
-                  </div>
-                  <div className="relative z-10 space-y-8">
-                     <div className="flex justify-between items-center">
-                        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Global Completion</span>
-                        <span className="text-2xl font-black text-primary">{cycle.progress || cycle.completionRate || 0}%</span>
-                     </div>
-                     <div className="h-2 w-full bg-white/10 rounded-full overflow-hidden shadow-inner">
-                        <div className="h-full bg-primary shadow-[0_0_12px_rgba(22,89,230,0.5)] transition-all duration-1000" style={{ width: `${cycle.progress || cycle.completionRate || 0}%` }} />
-                     </div>
-                     <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest">
-                        <span className="text-slate-500">Timeline: {cycle.start}</span>
-                        <span className="text-slate-500">Deadline: {cycle.end}</span>
-                     </div>
-                  </div>
-               </div>
-            </div>
-
-            <div className="space-y-4">
-               <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Administrative Actions</h4>
-               <div className="space-y-2">
-                  <button className="w-full flex items-center justify-between p-4 bg-white border border-slate-200 rounded-2xl hover:border-primary transition-all group">
-                     <span className="text-xs font-bold text-slate-700 group-hover:text-primary transition-colors uppercase tracking-tight">Sync Unit Progress Data</span>
-                     <RefreshCw size={14} className="text-slate-300 group-hover:text-primary transition-colors" />
-                  </button>
-                  <button className="w-full flex items-center justify-between p-4 bg-white border border-slate-200 rounded-2xl hover:border-primary transition-all group">
-                     <span className="text-xs font-bold text-slate-700 group-hover:text-primary transition-colors uppercase tracking-tight">Export Calibration Audit</span>
-                     <Download size={14} className="text-slate-300 group-hover:text-primary transition-colors" />
-                  </button>
-               </div>
-            </div>
-
-            {showPreferences && (
-              <div className="p-6 bg-primary/5 border border-primary/20 rounded-3xl animate-in slide-in-from-bottom-2 duration-300">
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-[10px] font-black text-primary uppercase tracking-widest">Cycle Overrides</h4>
-                  <button onClick={() => setShowPreferences(false)}><X size={14} className="text-primary" /></button>
-                </div>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between p-2 bg-white rounded-lg border border-slate-100">
-                    <span className="text-[10px] font-bold text-slate-600">Anonymous Peer Reviews</span>
-                    <div className="w-8 h-4 bg-primary rounded-full relative"><div className="absolute right-0.5 top-0.5 w-3 h-3 bg-white rounded-full" /></div>
-                  </div>
-                  <div className="flex items-center justify-between p-2 bg-white rounded-lg border border-slate-100">
-                    <span className="text-[10px] font-bold text-slate-600">Manual Grading Override</span>
-                    <div className="w-8 h-4 bg-slate-200 rounded-full relative"><div className="absolute left-0.5 top-0.5 w-3 h-3 bg-white rounded-full" /></div>
-                  </div>
-                </div>
-              </div>
-            )}
-         </div>
-         
-         <div className="p-8 border-t border-slate-100 bg-slate-50 flex items-center space-x-3">
-            {cycle.status === 'Active' ? (
-              <button className="flex-1 py-4 bg-red-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-red-200 hover:scale-[1.02] transition-all">Force Cycle Lock</button>
-            ) : cycle.status === 'Upcoming' ? (
-              <button 
-                onClick={handleLaunch}
-                disabled={isLaunching}
-                className="flex-1 py-4 bg-primary text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.02] transition-all flex items-center justify-center space-x-2"
-              >
-                {isLaunching ? <Loader2 size={16} className="animate-spin" /> : <span>Trigger Manual Launch</span>}
-              </button>
-            ) : (
-              <button className="flex-1 py-4 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl hover:bg-black transition-all">Download Closed Summary</button>
-            )}
-            <button 
-              onClick={() => setShowPreferences(!showPreferences)}
-              className={`p-4 rounded-xl border transition-all ${showPreferences ? 'bg-primary text-white border-primary shadow-lg' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'}`}
-            >
-              <SlidersHorizontal size={18}/>
-            </button>
-         </div>
-      </div>
-    </>
-  );
-};
-
-/**
- * Template Logic Designer - Configure Weights
- */
-const TemplateLogicDesigner = ({ template, onSave, onClose }: { template: RatingTemplate, onSave: (details: TemplateComponent[]) => void, onClose: () => void }) => {
-  const [logic, setLogic] = useState<TemplateComponent[]>(template.logicDetails || []);
-
-  const totalWeight = logic.reduce((acc, curr) => acc + curr.weight, 0);
-
-  const handleWeightChange = (id: string, weight: number) => {
-    setLogic(logic.map(l => l.id === id ? { ...l, weight } : l));
-  };
-
-  const redistributeWeights = () => {
-    const equalWeight = Math.floor(100 / logic.length);
-    setLogic(logic.map((l, idx) => ({ 
-      ...l, 
-      weight: idx === logic.length - 1 ? 100 - (equalWeight * (logic.length - 1)) : equalWeight 
-    })));
-  };
-
-  return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-      <div className="bg-white rounded-[2.5rem] w-full max-w-xl shadow-2xl overflow-hidden border border-slate-200 flex flex-col max-h-[90vh]">
-        <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-          <div className="flex items-center space-x-4">
-            <div className="w-12 h-12 bg-slate-900 text-white rounded-2xl flex items-center justify-center shadow-lg">
-              <Zap size={24}/>
-            </div>
-            <div>
-              <h3 className="text-xl font-bold text-slate-900 tracking-tight uppercase leading-none">Scoring Architecture</h3>
-              <p className="text-xs text-slate-500 mt-1 uppercase tracking-widest font-bold">{template.name}</p>
-            </div>
-          </div>
-          <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 transition-colors"><X size={24}/></button>
-        </div>
-
-        <div className="p-8 space-y-8 overflow-y-auto custom-scrollbar">
-           <div className="flex items-center justify-between px-1">
-              <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Weight Distribution Strategy</h4>
-              <button onClick={redistributeWeights} className="text-[10px] font-bold text-primary hover:underline uppercase tracking-widest flex items-center space-x-1">
-                 <RefreshCw size={10} />
-                 <span>Apply Equal Weight</span>
-              </button>
-           </div>
-
-           <div className="space-y-4">
-              {logic.map(comp => (
-                <div key={comp.id} className="p-6 bg-slate-50 border border-slate-100 rounded-3xl space-y-6 shadow-inner">
-                   <div className="flex justify-between items-center">
-                      <div className="flex items-center space-x-4">
-                         <div className={`p-2 rounded-xl bg-white shadow-sm ${comp.type === 'OKR' ? 'text-primary' : comp.type === 'KPI' ? 'text-secondary' : 'text-slate-400'}`}>
-                            {comp.type === 'OKR' ? <Target size={16}/> : comp.type === 'KPI' ? <Zap size={16}/> : <MessageSquare size={16}/>}
-                         </div>
-                         <div>
-                            <p className="text-xs font-black uppercase tracking-tight text-slate-800">{comp.name}</p>
-                            <p className="text-[9px] text-slate-400 font-bold uppercase">{comp.type} Based logic</p>
-                         </div>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <input 
-                           type="number" 
-                           value={comp.weight} 
-                           onChange={e => handleWeightChange(comp.id, parseInt(e.target.value) || 0)}
-                           className="w-16 bg-white border border-slate-200 rounded-lg px-2 py-1 text-sm font-black text-center outline-none focus:ring-2 focus:ring-primary/20"
-                        />
-                        <span className="text-xs font-bold text-slate-400">%</span>
-                      </div>
-                   </div>
-                   <input 
-                    type="range" 
-                    min="0" max="100" 
-                    value={comp.weight} 
-                    onChange={e => handleWeightChange(comp.id, parseInt(e.target.value))}
-                    className="w-full h-1.5 bg-white rounded-full appearance-none cursor-pointer accent-primary" 
-                   />
-                </div>
-              ))}
-           </div>
-
-           <div className={`p-6 rounded-3xl flex items-center justify-between transition-all ${totalWeight === 100 ? 'bg-green-50 border-2 border-green-100 text-green-700' : 'bg-red-50 border-2 border-red-100 text-red-700'}`}>
-              <div className="flex items-center space-x-3">
-                 {totalWeight === 100 ? <CheckCircle2 size={24}/> : <AlertTriangle size={24}/>}
-                 <p className="text-sm font-black uppercase tracking-tight">Integrity Check</p>
-              </div>
-              <div className="text-right">
-                 <p className="text-xl font-black">{totalWeight}% / 100%</p>
-                 <p className="text-[10px] font-bold opacity-70 uppercase tracking-widest">{totalWeight === 100 ? 'Logic Balanced' : 'Weight imbalance detected'}</p>
-              </div>
-           </div>
-        </div>
-
-        <div className="p-8 border-t border-slate-100 bg-slate-50 flex items-center justify-end space-x-3">
-           <button onClick={onClose} className="px-6 py-2.5 text-sm font-bold text-slate-500 hover:text-slate-800 transition-colors uppercase tracking-widest text-[11px]">Discard Changes</button>
-           <button 
-            disabled={totalWeight !== 100}
-            onClick={() => onSave(logic)}
-            className="px-10 py-3 bg-slate-900 text-white rounded-2xl text-sm font-black uppercase tracking-widest shadow-xl hover:bg-black transition-all disabled:opacity-30"
-           >
-              Deploy Scoring Model
-           </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const BuildPipTemplateWizard = ({ onAdd, onClose }: { onAdd: (t: PIPTemplate) => void, onClose: () => void }) => {
-  const [formData, setFormData] = useState({
-    name: '',
     desc: '',
-    sections: [
-      { id: '1', type: 'gaps', label: 'Performance Gaps Identified', required: true },
-      { id: '2', type: 'smart', label: 'SMART Goals (Mini-OKRs)', required: true },
-      { id: '3', type: 'actions', label: 'Required Daily Actions', required: true },
-      { id: '4', type: 'resources', label: 'Institutional Support Resources', required: false }
-    ]
-  });
-
-  const toggleRequired = (id: string) => {
-    setFormData(prev => ({
-      ...prev,
-      sections: prev.sections.map(s => s.id === id ? { ...s, required: !s.required } : s)
-    }));
-  };
-
-  const handleSubmit = () => {
-    onAdd({
-      id: `pip-${Date.now()}`,
-      name: formData.name || 'New PIP Framework',
-      desc: formData.desc || 'Institutional PIP guidelines.',
-      sections: formData.sections
-    });
-  };
-
-  return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-      <div className="bg-white rounded-[2.5rem] w-full max-w-xl shadow-2xl overflow-hidden border border-slate-200 flex flex-col max-h-[90vh]">
-        <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-indigo-50/50">
-          <div className="flex items-center space-x-4">
-            <div className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200">
-              <PipIcon size={24}/>
-            </div>
-            <div>
-              <h3 className="text-xl font-bold text-slate-900 tracking-tight uppercase">PIP Architect</h3>
-              <p className="text-xs text-slate-500 mt-1">Define institutional escalation standards</p>
-            </div>
-          </div>
-          <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 transition-colors"><X size={24}/></button>
-        </div>
-
-        <div className="p-8 space-y-8 overflow-y-auto custom-scrollbar">
-           <div className="space-y-3">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Framework Designation</label>
-              <input 
-                value={formData.name}
-                onChange={e => setFormData({ ...formData, name: e.target.value })}
-                placeholder="e.g. Sales Unit Escalation Policy"
-                className="w-full border-2 border-slate-100 rounded-2xl px-6 py-4 font-bold text-lg outline-none focus:border-indigo-600 transition-all shadow-inner uppercase tracking-tight"
-              />
-           </div>
-
-           <div className="space-y-4">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Mandatory Policy Sections</label>
-              <div className="space-y-2">
-                 {formData.sections.map((sec) => (
-                    <div key={sec.id} className="p-4 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-between group hover:bg-white transition-all shadow-sm">
-                       <div className="flex items-center space-x-4">
-                          <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-all">
-                             {sec.type === 'gaps' ? <AlertCircle size={18}/> : sec.type === 'smart' ? <TargetIcon size={18}/> : sec.type === 'actions' ? <ListTodo size={18}/> : <Info size={18}/>}
-                          </div>
-                          <span className="text-xs font-bold text-slate-700 uppercase tracking-tight">{sec.label}</span>
-                       </div>
-                       <div className="flex items-center space-x-3">
-                          <span className="text-[9px] font-black uppercase text-slate-400">Required</span>
-                          <div 
-                            onClick={() => toggleRequired(sec.id)}
-                            className={`w-8 h-4 rounded-full relative transition-all cursor-pointer ${sec.required ? 'bg-indigo-600' : 'bg-slate-200'}`}
-                          >
-                             <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all ${sec.required ? 'right-0.5' : 'left-0.5'}`} />
-                          </div>
-                       </div>
-                    </div>
-                 ))}
-              </div>
-           </div>
-        </div>
-
-        <div className="p-8 border-t border-slate-100 bg-slate-50 flex items-center justify-end space-x-3">
-           <button onClick={onClose} className="px-6 py-2.5 text-sm font-bold text-slate-500 hover:text-slate-800 transition-colors uppercase tracking-widest text-[11px]">Cancel Architect</button>
-           <button 
-            disabled={!formData.name}
-            onClick={handleSubmit}
-            className="px-10 py-3 bg-indigo-600 text-white rounded-2xl text-sm font-black uppercase tracking-widest shadow-xl shadow-indigo-200 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-30"
-           >
-              Register PIP Policy
-           </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const BuildTemplateWizard = ({ onAdd, onClose }: { onAdd: (t: RatingTemplate) => void, onClose: () => void }) => {
-  const [formData, setFormData] = useState({
-    name: '',
-    desc: '',
+    framework: 'OKR',
     components: [] as string[]
   });
 
-  const COMPONENT_OPTIONS = ['OKRs', 'KPIs', 'Competencies', 'Peer Feedback', 'Self-Appraisal', 'Manager Score'];
+  const FRAMEWORKS = [
+    { id: 'OKR', label: 'OKRs', desc: 'Objectives & Key Results for strategic focus.', icon: <Target size={20}/> },
+    { id: 'SMART', label: 'SMART', desc: 'Specific, Measurable, Achievable goals.', icon: <Zap size={20}/> },
+    { id: 'BSC', label: 'BSC', desc: 'Balanced Scorecard perspective alignment.', icon: <Layers size={20}/> },
+    { id: 'Project', label: 'Project-Based', desc: 'Milestone and delivery output tracking.', icon: <Binary size={20}/> },
+    { id: 'IDG', label: 'IDG (Individual Dev)', desc: 'Growth, skills, and behavior focused.', icon: <Star size={20}/> }
+  ];
+
+  const COMPONENT_OPTIONS = ['OKRs', 'KPIs', 'Competencies', 'Peer Feedback', 'Self-Appraisal', 'Manager Score', '360 Pulse', 'Skill Check'];
 
   const toggleComponent = (comp: string) => {
     setFormData(prev => ({
@@ -1386,6 +769,7 @@ const BuildTemplateWizard = ({ onAdd, onClose }: { onAdd: (t: RatingTemplate) =>
       name: formData.name || 'Custom Template',
       desc: formData.desc || 'Custom logic defined via Policy Studio.',
       usage: '0%',
+      framework: formData.framework,
       components: formData.components,
       logicDetails: formData.components.map((c, i) => ({
         id: `l-${i}-${Date.now()}`,
@@ -1398,68 +782,264 @@ const BuildTemplateWizard = ({ onAdd, onClose }: { onAdd: (t: RatingTemplate) =>
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-      <div className="bg-white rounded-[2.5rem] w-full max-w-xl shadow-2xl overflow-hidden border border-slate-200 flex flex-col">
+      <div className="bg-white rounded-[2.5rem] w-full max-w-4xl shadow-2xl overflow-hidden border border-slate-200 flex flex-col max-h-[90vh]">
         <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
           <div className="flex items-center space-x-4">
-            <div className="w-12 h-12 bg-slate-900 text-white rounded-2xl flex items-center justify-center shadow-lg">
+            <div className="w-12 h-12 bg-primary text-white rounded-2xl flex items-center justify-center shadow-lg">
               <Plus size={24}/>
             </div>
             <div>
               <h3 className="text-xl font-bold text-slate-900 tracking-tight uppercase leading-none">Template Architect</h3>
-              <p className="text-xs text-slate-500 mt-1">Design a new performance evaluation framework</p>
+              <p className="text-xs text-slate-500 mt-1 uppercase tracking-widest font-bold">Step {step} of 3</p>
             </div>
           </div>
           <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 transition-colors"><X size={24}/></button>
         </div>
 
-        <div className="p-8 space-y-8 overflow-y-auto max-h-[60vh] custom-scrollbar">
-           <div className="space-y-3">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Template Name</label>
+        <div className="p-10 space-y-12 overflow-y-auto custom-scrollbar flex-1 bg-white">
+           {step === 1 && (
+             <div className="space-y-10 animate-in slide-in-from-right duration-400">
+                <div className="space-y-6">
+                   <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Institutional Designation</label>
+                      <input 
+                        value={formData.name}
+                        onChange={e => setFormData({ ...formData, name: e.target.value })}
+                        placeholder="e.g. Lead Engineer Evaluation v4"
+                        className="w-full bg-white text-slate-900 border-2 border-slate-100 rounded-2xl px-6 py-4 font-bold text-lg outline-none focus:border-primary transition-all shadow-inner uppercase tracking-tight"
+                      />
+                   </div>
+                   <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Strategic Narrative (Description)</label>
+                      <textarea 
+                        value={formData.desc}
+                        onChange={e => setFormData({ ...formData, desc: e.target.value })}
+                        placeholder="Describe the performance philosophy behind this framework..."
+                        className="w-full bg-white text-slate-900 border-2 border-slate-100 rounded-2xl px-6 py-4 text-sm font-medium outline-none focus:border-primary transition-all shadow-inner resize-none h-32"
+                      />
+                   </div>
+                </div>
+             </div>
+           )}
+
+           {step === 2 && (
+             <div className="space-y-10 animate-in slide-in-from-right duration-400">
+                <div className="space-y-6">
+                   <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] border-l-4 border-primary pl-4">Goal Framework Strategy</label>
+                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {FRAMEWORKS.map((fw) => (
+                        <button 
+                          key={fw.id}
+                          onClick={() => setFormData({...formData, framework: fw.id})}
+                          className={`p-6 rounded-[2rem] border-2 transition-all text-left flex flex-col h-full group ${
+                            formData.framework === fw.id ? 'bg-primary/5 border-primary shadow-xl ring-4 ring-primary/5' : 'bg-white border-slate-100 hover:border-slate-300'
+                          }`}
+                        >
+                           <div className={`p-3 rounded-xl w-fit mb-5 transition-colors ${formData.framework === fw.id ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'bg-slate-50 text-slate-400'}`}>
+                              {fw.icon}
+                           </div>
+                           <h4 className={`text-sm font-black uppercase tracking-tight mb-2 ${formData.framework === fw.id ? 'text-primary' : 'text-slate-900'}`}>{fw.label}</h4>
+                           <p className="text-[10px] text-slate-500 font-medium leading-relaxed italic line-clamp-2">"{fw.desc}"</p>
+                           {formData.framework === fw.id && <div className="mt-4 flex items-center space-x-1.5 text-primary text-[8px] font-black uppercase tracking-widest">
+                             <CheckCircle2 size={12} />
+                             <span>Active Selection</span>
+                           </div>}
+                        </button>
+                      ))}
+                   </div>
+                </div>
+             </div>
+           )}
+
+           {step === 3 && (
+             <div className="space-y-10 animate-in slide-in-from-right duration-400">
+                <div className="space-y-6">
+                   <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] border-l-4 border-primary pl-4">Institutional Score Components</label>
+                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      {COMPONENT_OPTIONS.map((comp) => (
+                        <button 
+                          key={comp}
+                          onClick={() => toggleComponent(comp)}
+                          className={`p-5 rounded-2xl border-2 transition-all text-left flex flex-col justify-between group h-28 ${
+                            formData.components.includes(comp) ? 'bg-primary/5 border-primary shadow-sm ring-2 ring-primary/5' : 'bg-white border-slate-100 text-slate-500 hover:border-slate-300'
+                          }`}
+                        >
+                           <span className={`text-[10px] font-black uppercase tracking-widest ${formData.components.includes(comp) ? 'text-primary' : 'text-slate-400'}`}>{comp}</span>
+                           <div className="flex justify-end">
+                              {formData.components.includes(comp) ? <CheckCircle2 size={18} className="text-primary" /> : <Plus size={18} className="text-slate-200 group-hover:text-slate-400" />}
+                           </div>
+                        </button>
+                      ))}
+                   </div>
+                </div>
+                <div className="p-8 bg-slate-900 rounded-[2.5rem] text-white flex items-center justify-between shadow-2xl relative overflow-hidden">
+                   <div className="absolute top-0 right-0 p-4 opacity-10"><Brain size={100} className="text-primary" /></div>
+                   <div className="relative z-10">
+                      <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-2">Architect Integrity Monitor</p>
+                      <h4 className="text-2xl font-black">Ready for Deployment</h4>
+                      <p className="text-xs text-slate-400 mt-2 font-medium">Model: {formData.framework} strategy with {formData.components.length} data vectors.</p>
+                   </div>
+                   <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center relative z-10 border border-white/10">
+                      <Rocket size={28} className="text-primary" />
+                   </div>
+                </div>
+             </div>
+           )}
+        </div>
+
+        <div className="p-8 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
+           <button onClick={() => step > 1 ? setStep(step - 1) : onClose()} className="px-8 py-3 text-xs font-black uppercase tracking-widest text-slate-400 hover:text-slate-800 transition-colors">
+              {step === 1 ? 'Discard' : 'Previous'}
+           </button>
+           <button 
+            disabled={step === 1 && !formData.name || step === 3 && formData.components.length === 0}
+            onClick={() => step < 3 ? setStep(step + 1) : handleSubmit()}
+            className="px-14 py-4 bg-primary text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-30"
+           >
+              {step === 3 ? 'Deploy Framework' : 'Next Journey'}
+           </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// --- FIX: Implementation of missing WorkflowDesignerWizard and CycleDetailDrawer components ---
+
+/**
+ * Workflow Designer Wizard Component
+ */
+const WorkflowDesignerWizard = ({ workflow, onSave, onClose }: any) => {
+  const [formData, setFormData] = useState(workflow || {
+    name: '',
+    desc: '',
+    isDefault: false,
+    steps: [
+      { id: 'ws1', label: 'Self-Appraisal', actor: 'Employee', duration: 7, type: 'Input', isMandatory: true }
+    ]
+  });
+
+  const addStep = () => {
+    const newStep = {
+      id: `ws-${Date.now()}`,
+      label: 'New Phase',
+      actor: 'Manager',
+      duration: 5,
+      type: 'Review',
+      isMandatory: true
+    };
+    setFormData({ ...formData, steps: [...formData.steps, newStep] });
+  };
+
+  const removeStep = (id: string) => {
+    if (formData.steps.length === 1) return;
+    setFormData({ ...formData, steps: formData.steps.filter((s: any) => s.id !== id) });
+  };
+
+  const updateStep = (id: string, field: string, value: any) => {
+    setFormData({
+      ...formData,
+      steps: formData.steps.map((s: any) => s.id === id ? { ...s, [field]: value } : s)
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+      <div className="bg-white rounded-[2.5rem] w-full max-w-3xl shadow-2xl overflow-hidden border border-slate-200 flex flex-col max-h-[90vh]">
+        <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+          <div className="flex items-center space-x-4">
+            <div className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg">
+              <GitMerge size={24}/>
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-slate-900 tracking-tight uppercase leading-none">Workflow Designer</h3>
+              <p className="text-xs text-slate-500 mt-1">Design the sequence of institutional performance actions</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 transition-colors"><X size={24}/></button>
+        </div>
+
+        <div className="p-10 space-y-8 overflow-y-auto custom-scrollbar flex-1 bg-white">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Workflow Designation</label>
               <input 
                 value={formData.name}
                 onChange={e => setFormData({ ...formData, name: e.target.value })}
-                placeholder="e.g. Lead Engineer Evaluation"
-                className="w-full border-2 border-slate-100 rounded-2xl px-6 py-4 font-bold text-lg outline-none focus:border-primary transition-all shadow-inner uppercase tracking-tight"
+                placeholder="e.g. Sales Unit Standard"
+                className="w-full bg-white text-slate-900 border-2 border-slate-100 rounded-2xl px-6 py-4 font-bold text-lg outline-none focus:border-indigo-600 transition-all shadow-inner uppercase"
               />
-           </div>
-
-           <div className="space-y-3">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Philosophy Statement</label>
-              <textarea 
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Description</label>
+              <input 
                 value={formData.desc}
                 onChange={e => setFormData({ ...formData, desc: e.target.value })}
-                placeholder="Describe the performance philosophy behind this template..."
-                className="w-full border-2 border-slate-100 rounded-2xl px-6 py-4 text-sm font-medium outline-none focus:border-primary transition-all shadow-inner resize-none h-24"
+                placeholder="e.g. Optimized loop for revenue teams"
+                className="w-full bg-white text-slate-900 border-2 border-slate-100 rounded-2xl px-6 py-4 font-bold text-sm outline-none focus:border-indigo-600 transition-all shadow-inner"
               />
-           </div>
+            </div>
+          </div>
 
-           <div className="space-y-4">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Institutional Components</label>
-              <div className="grid grid-cols-2 gap-3">
-                 {COMPONENT_OPTIONS.map((comp) => (
-                    <button 
-                       key={comp}
-                       onClick={() => toggleComponent(comp)}
-                       className={`p-4 rounded-2xl border-2 transition-all text-left flex items-center justify-between group ${
-                         formData.components.includes(comp) ? 'bg-primary/5 border-primary text-primary shadow-sm' : 'bg-white border-slate-100 text-slate-500 hover:border-slate-300'
-                       }`}
-                    >
-                       <span className="text-[10px] font-black uppercase tracking-tight">{comp}</span>
-                       {formData.components.includes(comp) && <CheckCircle2 size={16} />}
-                    </button>
-                 ))}
-              </div>
-           </div>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Phase Sequence</label>
+              <button onClick={addStep} className="flex items-center space-x-2 text-[10px] font-black text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-xl border border-indigo-100">
+                <Plus size={12} />
+                <span>Append Phase</span>
+              </button>
+            </div>
+            <div className="space-y-3">
+              {formData.steps.map((step: any, idx: number) => (
+                <div key={step.id} className="p-6 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-between group">
+                   <div className="flex items-center space-x-6 flex-1">
+                      <div className="w-8 h-8 rounded-full bg-white border-2 border-slate-200 flex items-center justify-center text-[10px] font-black text-slate-400 group-hover:border-indigo-600 group-hover:text-indigo-600 transition-all shadow-sm">
+                         {idx + 1}
+                      </div>
+                      <div className="grid grid-cols-3 gap-4 flex-1">
+                         <input 
+                            value={step.label}
+                            onChange={e => updateStep(step.id, 'label', e.target.value)}
+                            className="bg-white text-slate-900 border-none focus:ring-0 text-xs font-bold uppercase p-1 rounded"
+                         />
+                         <select 
+                            value={step.actor}
+                            onChange={e => updateStep(step.id, 'actor', e.target.value)}
+                            className="bg-white text-slate-900 border-none focus:ring-0 text-[10px] font-black uppercase p-1 rounded appearance-none"
+                         >
+                            <option>Employee</option>
+                            <option>Manager</option>
+                            <option>HR view</option>
+                            <option>Executives</option>
+                         </select>
+                         <div className="flex items-center space-x-2">
+                            <input 
+                               type="number"
+                               value={step.duration}
+                               onChange={e => updateStep(step.id, 'duration', parseInt(e.target.value) || 0)}
+                               className="w-10 bg-white text-slate-900 border border-slate-200 rounded-md px-1 py-0.5 text-[10px] font-black text-center"
+                            />
+                            <span className="text-[9px] font-bold text-slate-400">days</span>
+                         </div>
+                      </div>
+                   </div>
+                   <button onClick={() => removeStep(step.id)} className="p-2 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all">
+                      <Trash2 size={16} />
+                   </button>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
         <div className="p-8 border-t border-slate-100 bg-slate-50 flex items-center justify-end space-x-3">
-           <button onClick={onClose} className="px-6 py-2.5 text-sm font-bold text-slate-500 hover:text-slate-800 transition-colors uppercase tracking-widest text-[11px]">Discard</button>
+           <button onClick={onClose} className="px-6 py-2.5 text-xs font-black uppercase text-slate-500">Cancel</button>
            <button 
-            disabled={!formData.name || formData.components.length === 0}
-            onClick={handleSubmit}
-            className="px-10 py-3 bg-primary text-white rounded-2xl text-sm font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-30"
+              onClick={() => onSave({ ...formData, id: formData.id || `w-${Date.now()}` })}
+              disabled={!formData.name}
+              className="px-12 py-3 bg-indigo-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl shadow-indigo-900/40 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-30"
            >
-              Finalize & Deploy
+              Save Workflow Strategy
            </button>
         </div>
       </div>
@@ -1468,101 +1048,107 @@ const BuildTemplateWizard = ({ onAdd, onClose }: { onAdd: (t: RatingTemplate) =>
 };
 
 /**
- * Add Rating Bucket Modal
+ * Cycle Detail Drawer Component
  */
-const AddBucketModal = ({ onAdd, onClose, scaleName }: { onAdd: (b: Omit<RatingBucket, 'id'>) => void, onClose: () => void, scaleName: string }) => {
-  const [formData, setFormData] = useState({
-    score: '',
-    label: '',
-    color: 'bg-primary'
-  });
-
-  const PRESET_COLORS = [
-    'bg-primary', 'bg-secondary', 'bg-green-500', 'bg-amber-500', 'bg-red-500', 
-    'bg-purple-500', 'bg-pink-500', 'bg-indigo-500', 'bg-slate-900', 'bg-slate-400'
-  ];
-
+const CycleDetailDrawer = ({ cycle, onClose }: { cycle: PerformanceCycle, onClose: () => void }) => {
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-      <div className="bg-white rounded-[2.5rem] w-full max-w-lg shadow-2xl overflow-hidden border border-slate-200 flex flex-col">
-        <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+    <>
+      <div className="fixed inset-0 z-[150] bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300" onClick={onClose}></div>
+      <div className="fixed top-0 right-0 bottom-0 w-full sm:w-[500px] bg-white z-[160] shadow-2xl flex flex-col animate-in slide-in-from-right duration-500 overflow-hidden">
+        <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50">
           <div className="flex items-center space-x-4">
-            <div className="w-12 h-12 bg-primary text-white rounded-2xl flex items-center justify-center shadow-lg shadow-primary/20">
-              <Palette size={24}/>
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg ${cycle.status === 'Active' ? 'bg-primary text-white' : 'bg-slate-200 text-slate-500'}`}>
+              <CalendarDays size={24}/>
             </div>
             <div>
-              <h3 className="text-xl font-bold text-slate-900 tracking-tight uppercase leading-none">New Rating Level</h3>
-              <p className="text-xs text-slate-500 mt-1 uppercase tracking-widest font-bold">Scale: {scaleName}</p>
+              <h3 className="text-xl font-bold text-slate-900 tracking-tight uppercase leading-none">{cycle.name}</h3>
+              <p className="text-[10px] text-slate-500 mt-1 font-bold uppercase tracking-widest">Cycle Management Interface</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 transition-colors"><X size={24}/></button>
+          <button onClick={onClose} className="p-2 text-slate-400 hover:bg-slate-200 rounded-lg transition-all"><X size={24}/></button>
         </div>
 
-        <div className="p-8 space-y-8">
-           <div className="grid grid-cols-2 gap-6">
-              <div className="space-y-3">
-                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Institutional Value</label>
-                 <input 
-                   value={formData.score}
-                   onChange={e => setFormData({ ...formData, score: e.target.value })}
-                   placeholder="e.g. 5.0"
-                   className="w-full bg-white text-slate-900 border-2 border-slate-100 rounded-2xl px-6 py-4 font-bold text-lg outline-none focus:border-primary transition-all shadow-inner"
-                 />
-              </div>
-              <div className="space-y-3">
-                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Qualitative Bucket</label>
-                 <input 
-                   value={formData.label}
-                   onChange={e => setFormData({ ...formData, label: e.target.value })}
-                   placeholder="e.g. Mastery"
-                   className="w-full bg-white text-slate-900 border-2 border-slate-100 rounded-2xl px-6 py-4 font-bold text-lg outline-none focus:border-primary transition-all shadow-inner"
-                 />
-              </div>
-           </div>
+        <div className="flex-1 overflow-y-auto p-8 space-y-10 custom-scrollbar">
+          <div className="space-y-4">
+            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Institutional Status</h4>
+            <div className={`p-6 rounded-[2rem] border-2 flex items-center justify-between ${
+              cycle.status === 'Active' ? 'bg-green-50 border-green-100' : 
+              cycle.status === 'Closed' ? 'bg-slate-50 border-slate-100' : 
+              'bg-blue-50 border-blue-100'
+            }`}>
+               <div className="flex items-center space-x-4">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                    cycle.status === 'Active' ? 'bg-green-500 text-white shadow-lg shadow-green-200' : 
+                    cycle.status === 'Closed' ? 'bg-slate-400 text-white' : 
+                    'bg-blue-500 text-white'
+                  }`}>
+                    {cycle.status === 'Active' ? <Activity size={20}/> : cycle.status === 'Closed' ? <Lock size={20}/> : <Clock size={20}/>}
+                  </div>
+                  <div>
+                    <p className="text-sm font-black text-slate-900 uppercase">{cycle.status}</p>
+                    <p className="text-[10px] text-slate-500 font-bold uppercase">{cycle.start} — {cycle.end}</p>
+                  </div>
+               </div>
+            </div>
+          </div>
 
-           <div className="space-y-4">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Institutional Visual Indicator</label>
-              <div className="flex flex-wrap gap-3">
-                 {PRESET_COLORS.map((c) => (
-                    <button 
-                       key={c}
-                       onClick={() => setFormData({ ...formData, color: c })}
-                       className={`w-12 h-12 rounded-2xl transition-all border-4 ${
-                         formData.color === c ? 'border-primary ring-4 ring-primary/10 scale-110 shadow-lg' : 'border-white hover:scale-105'
-                       } ${c}`}
-                    />
-                 ))}
+          <div className="space-y-6">
+            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Logic Configuration</h4>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-5 bg-slate-50 border border-slate-100 rounded-2xl">
+                 <p className="text-[9px] font-black text-slate-400 uppercase mb-1.5">Rating Model</p>
+                 <p className="text-xs font-bold text-slate-800">{cycle.template}</p>
               </div>
-           </div>
+              <div className="p-5 bg-slate-50 border border-slate-100 rounded-2xl">
+                 <p className="text-[9px] font-black text-slate-400 uppercase mb-1.5">Enrollments</p>
+                 <p className="text-xs font-bold text-slate-800">{cycle.participants} Users</p>
+              </div>
+            </div>
+            <div className="p-6 bg-slate-50 border border-slate-100 rounded-2xl italic font-medium text-xs text-slate-500 leading-relaxed">
+               "{cycle.description}"
+            </div>
+          </div>
 
-           <div className="p-6 bg-slate-900 rounded-[2rem] flex items-center justify-between text-white shadow-xl">
-              <div className="flex items-center space-x-4">
-                 <div className={`w-6 h-6 rounded-full border-2 border-white/20 ${formData.color}`} />
-                 <div>
-                    <p className="text-sm font-black uppercase tracking-tight">{formData.label || 'New Bucket'}</p>
-                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Score: {formData.score || '--'}</p>
+          {cycle.status !== 'Upcoming' && (
+            <div className="space-y-4">
+              <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Execution Metrics</h4>
+              <div className="p-6 border border-slate-100 rounded-[2rem] space-y-6">
+                 <div className="flex justify-between items-end">
+                    <div>
+                       <p className="text-[10px] font-black text-slate-400 uppercase">System Completion Rate</p>
+                       <p className="text-2xl font-black text-slate-900 mt-1">{cycle.progress || cycle.completionRate || 0}%</p>
+                    </div>
+                    <Activity size={24} className="text-primary opacity-20" />
+                 </div>
+                 <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden shadow-inner">
+                    <div className="h-full bg-primary" style={{ width: `${cycle.progress || cycle.completionRate || 0}%` }} />
                  </div>
               </div>
-              <ShieldCheck size={24} className="text-primary" />
-           </div>
+            </div>
+          )}
         </div>
 
-        <div className="p-8 border-t border-slate-100 bg-slate-50 flex items-center justify-end space-x-3">
-           <button onClick={onClose} className="px-6 py-2.5 text-sm font-bold text-slate-500 hover:text-slate-800 transition-colors uppercase tracking-widest text-[11px]">Discard</button>
-           <button 
-            disabled={!formData.score || !formData.label}
-            onClick={() => onAdd(formData)}
-            className="px-10 py-3 bg-primary text-white rounded-2xl text-sm font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-30"
-           >
-              Create Bucket
+        <div className="p-8 border-t border-slate-100 bg-slate-50 flex flex-col space-y-3">
+           <button className="w-full py-4 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-slate-900/40 hover:bg-black transition-all flex items-center justify-center space-x-2">
+              <Download size={14} />
+              <span>Export Analysis PDF</span>
            </button>
+           {cycle.status === 'Active' && (
+              <button className="w-full py-4 border-2 border-red-100 text-red-600 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-red-50 transition-all">Emergency Lock Cycle</button>
+           )}
         </div>
       </div>
-    </div>
+    </>
   );
 };
 
-// -- Helpers --
+const SectionHeader = ({ title, desc }: any) => (
+  <div>
+    <h3 className="text-xl font-bold text-slate-900 tracking-tight uppercase">{title}</h3>
+    <p className="text-slate-500 text-sm mt-1 font-medium leading-relaxed italic">"{desc}"</p>
+  </div>
+);
+
 const TabButton = ({ active, onClick, icon, label }: any) => (
   <button 
     onClick={onClick}
@@ -1573,13 +1159,6 @@ const TabButton = ({ active, onClick, icon, label }: any) => (
     {icon}
     <span>{label}</span>
   </button>
-);
-
-const SectionHeader = ({ title, desc }: any) => (
-  <div>
-    <h3 className="text-xl font-bold text-slate-900 tracking-tight uppercase">{title}</h3>
-    <p className="text-slate-500 text-sm mt-1 font-medium leading-relaxed italic">"{desc}"</p>
-  </div>
 );
 
 const GovernanceToggle = ({ label, desc, active, onChange }: any) => (
@@ -1612,7 +1191,7 @@ const LabelRow = ({ score, label, color, onDelete }: any) => (
      </div>
      <div className="flex-1 flex items-center space-x-4">
         <div className={`w-4 h-4 rounded-full shadow-inner ${color}`} />
-        <input defaultValue={label} className="text-xs font-bold text-slate-700 bg-transparent border-none focus:ring-0 w-full uppercase tracking-tight" />
+        <input defaultValue={label} className="bg-white text-xs font-bold text-slate-700 border-none focus:ring-0 w-full uppercase tracking-tight p-1 rounded" />
      </div>
      <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
         <button onClick={onDelete} className="p-2.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"><Trash2 size={16}/></button>
@@ -1631,7 +1210,6 @@ const ChangeItem = ({ user, action, time }: any) => (
   </div>
 );
 
-// Modular Sub-components
 const PolicyAuditDrawer = ({ onClose }: any) => (
   <>
     <div className="fixed inset-0 z-[150] bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300" onClick={onClose}></div>
@@ -1670,7 +1248,7 @@ const PolicyAuditDrawer = ({ onClose }: any) => (
 
 const DeployFrameworkModal = ({ onConfirm, onClose }: any) => (
   <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-    <div className="bg-white rounded-[2.5rem] w-full max-w-md shadow-2xl overflow-hidden border border-slate-200">
+    <div className="bg-white rounded-[2.5rem] w-full max-md shadow-2xl overflow-hidden border border-slate-200">
       <div className="p-8 text-center space-y-6">
         <div className="w-20 h-20 bg-primary/10 text-primary rounded-[2rem] flex items-center justify-center mx-auto shadow-inner">
            <Rocket size={40} />
@@ -1691,5 +1269,81 @@ const DeployFrameworkModal = ({ onConfirm, onClose }: any) => (
     </div>
   </div>
 );
+
+const AddBucketModal = ({ onAdd, onClose, scaleName }: any) => {
+  const [formData, setFormData] = useState({ score: '', label: '', color: 'bg-primary' });
+  const PRESET_COLORS = ['bg-primary', 'bg-secondary', 'bg-green-500', 'bg-amber-500', 'bg-red-500', 'bg-purple-500', 'bg-pink-500', 'bg-indigo-500', 'bg-slate-900', 'bg-slate-400'];
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+      <div className="bg-white rounded-[2.5rem] w-full max-w-lg shadow-2xl overflow-hidden border border-slate-200 flex flex-col">
+        <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+          <div className="flex items-center space-x-4"><div className="w-12 h-12 bg-primary text-white rounded-2xl flex items-center justify-center shadow-lg"><Palette size={24}/></div>
+          <div><h3 className="text-xl font-bold text-slate-900 tracking-tight uppercase leading-none">New Rating Level</h3><p className="text-xs text-slate-500 mt-1 uppercase tracking-widest font-bold">Scale: {scaleName}</p></div></div>
+          <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 transition-colors"><X size={24}/></button>
+        </div>
+        <div className="p-8 space-y-8"><div className="grid grid-cols-2 gap-6"><div className="space-y-3"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Institutional Value</label>
+        <input value={formData.score} onChange={e => setFormData({ ...formData, score: e.target.value })} placeholder="e.g. 5.0" className="w-full bg-white text-slate-900 border-2 border-slate-100 rounded-2xl px-6 py-4 font-bold text-lg outline-none focus:border-primary transition-all shadow-inner" /></div>
+        <div className="space-y-3"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Qualitative Bucket</label>
+        <input value={formData.label} onChange={e => setFormData({ ...formData, label: e.target.value })} placeholder="e.g. Mastery" className="w-full bg-white text-slate-900 border-2 border-slate-100 rounded-2xl px-6 py-4 font-bold text-lg outline-none focus:border-primary transition-all shadow-inner" /></div></div>
+        <div className="space-y-4"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Institutional Visual Indicator</label><div className="flex flex-wrap gap-3">{PRESET_COLORS.map((c) => (
+        <button key={c} onClick={() => setFormData({ ...formData, color: c })} className={`w-12 h-12 rounded-2xl transition-all border-4 ${formData.color === c ? 'border-primary ring-4 ring-primary/10 scale-110 shadow-lg' : 'border-white hover:scale-105'} ${c}`} />))}</div></div>
+        <div className="p-6 bg-slate-900 rounded-[2rem] flex items-center justify-between text-white shadow-xl"><div className="flex items-center space-x-4"><div className={`w-6 h-6 rounded-full border-2 border-white/20 ${formData.color}`} /><div><p className="text-sm font-black uppercase tracking-tight">{formData.label || 'New Bucket'}</p><p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Score: {formData.score || '--'}</p></div></div><ShieldCheck size={24} className="text-primary" /></div></div>
+        <div className="p-8 border-t border-slate-100 bg-slate-50 flex items-center justify-end space-x-3"><button onClick={onClose} className="px-6 py-2.5 text-sm font-bold text-slate-500 hover:text-slate-800 transition-colors uppercase tracking-widest text-[11px]">Discard</button><button disabled={!formData.score || !formData.label} onClick={() => onAdd(formData)} className="px-10 py-3 bg-primary text-white rounded-2xl text-sm font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-30">Create Bucket</button></div>
+      </div>
+    </div>
+  );
+};
+
+const TemplateLogicDesigner = ({ template, onSave, onClose }: any) => {
+  const [logic, setLogic] = useState<TemplateComponent[]>(template.logicDetails || []);
+  const totalWeight = logic.reduce((acc, curr) => acc + curr.weight, 0);
+  const handleWeightChange = (id: string, weight: number) => { setLogic(logic.map(l => l.id === id ? { ...l, weight } : l)); };
+  const redistributeWeights = () => { const equalWeight = Math.floor(100 / logic.length); setLogic(logic.map((l, idx) => ({ ...l, weight: idx === logic.length - 1 ? 100 - (equalWeight * (logic.length - 1)) : equalWeight }))); };
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+      <div className="bg-white rounded-[2.5rem] w-full max-w-xl shadow-2xl overflow-hidden border border-slate-200 flex flex-col max-h-[90vh]">
+        <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/50"><div className="flex items-center space-x-4"><div className="w-12 h-12 bg-slate-900 text-white rounded-2xl flex items-center justify-center shadow-lg"><Zap size={24}/></div>
+        <div><h3 className="text-xl font-bold text-slate-900 tracking-tight uppercase leading-none">Scoring Architecture</h3><p className="text-xs text-slate-500 mt-1 uppercase tracking-widest font-bold">{template.name}</p></div></div><button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 transition-colors"><X size={24}/></button></div>
+        <div className="p-8 space-y-8 overflow-y-auto custom-scrollbar"><div className="flex items-center justify-between px-1"><h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Weight Distribution Strategy</h4><button onClick={redistributeWeights} className="text-[10px] font-bold text-primary hover:underline uppercase tracking-widest flex items-center space-x-1"><RefreshCw size={10} /><span>Apply Equal Weight</span></button></div>
+        <div className="space-y-4">{logic.map(comp => (<div key={comp.id} className="p-6 bg-slate-50 border border-slate-100 rounded-3xl space-y-6 shadow-inner"><div className="flex justify-between items-center"><div className="flex items-center space-x-4"><div className={`p-2 rounded-xl bg-white shadow-sm ${comp.type === 'OKR' ? 'text-primary' : comp.type === 'KPI' ? 'text-secondary' : 'text-slate-400'}`}>{comp.type === 'OKR' ? <Target size={16}/> : comp.type === 'KPI' ? <Zap size={16}/> : <MessageSquare size={16}/>}</div><div><p className="text-xs font-black uppercase tracking-tight text-slate-800">{comp.name}</p><p className="text-[9px] text-slate-400 font-bold uppercase">{comp.type} Based logic</p></div></div><div className="flex items-center space-x-2"><input type="number" value={comp.weight} onChange={e => handleWeightChange(comp.id, parseInt(e.target.value) || 0)} className="w-16 bg-white text-slate-900 border border-slate-200 rounded-lg px-2 py-1 text-sm font-black text-center outline-none focus:ring-2 focus:ring-primary/20" /><span className="text-xs font-bold text-slate-400">%</span></div></div><input type="range" min="0" max="100" value={comp.weight} onChange={e => handleWeightChange(comp.id, parseInt(e.target.value))} className="w-full h-1.5 bg-white rounded-full appearance-none cursor-pointer accent-primary" /></div>))}</div>
+        <div className={`p-6 rounded-3xl flex items-center justify-between transition-all ${totalWeight === 100 ? 'bg-green-50 border-2 border-green-100 text-green-700' : 'bg-red-50 border-2 border-red-100 text-red-700'}`}><div className="flex items-center space-x-3">{totalWeight === 100 ? <CheckCircle2 size={24}/> : <AlertTriangle size={24}/><p className="text-sm font-black uppercase tracking-tight">Integrity Check</p></div><div className="text-right"><p className="text-xl font-black">{totalWeight}% / 100%</p><p className="text-[10px] font-bold opacity-70 uppercase tracking-widest">{totalWeight === 100 ? 'Logic Balanced' : 'Weight imbalance detected'}</p></div></div></div>
+        <div className="p-8 border-t border-slate-100 bg-slate-50 flex items-center justify-end space-x-3"><button onClick={onClose} className="px-6 py-2.5 text-sm font-bold text-slate-500 hover:text-slate-800 transition-colors uppercase tracking-widest text-[11px]">Discard Changes</button><button disabled={totalWeight !== 100} onClick={() => onSave(logic)} className="px-10 py-3 bg-slate-900 text-white rounded-2xl text-sm font-black uppercase tracking-widest shadow-xl hover:bg-black transition-all disabled:opacity-30">Deploy Scoring Model</button></div>
+      </div>
+    </div>
+  );
+};
+
+const CreateCycleWizard = ({ onAdd, onClose, templates }: any) => {
+  const [step, setStep] = useState(1);
+  const [formData, setFormData] = useState({ name: '', description: '', template: templates[0]?.name || '', start: '', end: '', participants: 150 });
+  const handleSubmit = () => { onAdd({ id: `c${Date.now()}`, ...formData, status: 'Upcoming' }); };
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+      <div className="bg-white rounded-[2.5rem] w-full max-w-xl shadow-2xl overflow-hidden border border-slate-200 flex flex-col max-h-[90vh]">
+        <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/50"><div className="flex items-center space-x-4"><div className="w-12 h-12 bg-primary text-white rounded-2xl flex items-center justify-center shadow-lg shadow-primary/20"><CalendarClock size={24}/></div><div><h3 className="text-xl font-bold text-slate-900 tracking-tight uppercase leading-none">Cycle Scheduler</h3><p className="text-xs text-slate-500 mt-1 uppercase tracking-widest font-bold">Step {step} of 3</p></div></div><button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 transition-colors"><X size={24}/></button></div>
+        <div className="p-8 space-y-8 overflow-y-auto custom-scrollbar">{step === 1 && (<div className="space-y-6 animate-in slide-in-from-right duration-300"><div className="space-y-3"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Cycle Designation</label><input value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. Q4 Growth Calibration" className="w-full bg-white text-slate-900 border-2 border-slate-100 rounded-2xl px-6 py-4 font-bold text-lg outline-none focus:border-primary transition-all shadow-inner" /></div><div className="space-y-3"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Institutional Description</label><textarea value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} placeholder="Provide context..." className="w-full bg-white text-slate-900 border-2 border-slate-100 rounded-2xl px-6 py-4 text-sm font-medium outline-none focus:border-primary transition-all shadow-inner resize-none h-24" /></div></div>)}
+        {step === 2 && (<div className="space-y-6 animate-in slide-in-from-right duration-300"><div className="space-y-3"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Execution Template</label><div className="grid grid-cols-1 gap-3">{templates.map((t: any) => (<button key={t.id} onClick={() => setFormData({ ...formData, template: t.name })} className={`p-5 rounded-2xl border-2 transition-all text-left flex items-center justify-between ${formData.template === t.name ? 'bg-primary/5 border-primary shadow-sm' : 'bg-white border-slate-100 hover:border-slate-300'}`}><div><p className={`text-sm font-bold ${formData.template === t.name ? 'text-primary' : 'text-slate-800'}`}>{t.name}</p><p className="text-[10px] text-slate-400 mt-1 font-medium">{t.usage} utilization</p></div>{formData.template === t.name && <CheckCircle2 size={20} className="text-primary" />}</button>))}</div></div></div>)}
+        {step === 3 && (<div className="space-y-6 animate-in slide-in-from-right duration-300"><div className="grid grid-cols-2 gap-6"><div className="space-y-3"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Start Date</label><input type="date" value={formData.start} onChange={e => setFormData({...formData, start: e.target.value})} className="w-full bg-white text-slate-900 border-2 border-slate-100 rounded-2xl px-6 py-4 font-bold outline-none focus:border-primary" /></div><div className="space-y-3"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">End Date</label><input type="date" value={formData.end} onChange={e => setFormData({...formData, end: e.target.value})} className="w-full bg-white text-slate-900 border-2 border-slate-100 rounded-2xl px-6 py-4 font-bold outline-none focus:border-primary" /></div></div></div>)}</div>
+        <div className="p-8 border-t border-slate-100 bg-slate-50 flex items-center justify-between"><button onClick={() => step > 1 ? setStep(step - 1) : onClose()} className="px-6 py-2.5 text-sm font-bold text-slate-500 hover:text-slate-800 transition-colors uppercase tracking-widest text-[11px]">{step === 1 ? 'Cancel' : 'Previous'}</button><button disabled={step === 1 && !formData.name} onClick={() => step < 3 ? setStep(step + 1) : handleSubmit()} className="px-10 py-3 bg-primary text-white rounded-2xl text-sm font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-30">{step === 3 ? 'Deploy Cycle' : 'Next Step'}</button></div>
+      </div>
+    </div>
+  );
+};
+
+const BuildPipTemplateWizard = ({ onAdd, onClose }: any) => {
+  const [formData, setFormData] = useState({ name: '', desc: '', sections: [{ id: '1', type: 'gaps', label: 'Performance Gaps Identified', required: true }, { id: '2', type: 'smart', label: 'SMART Goals (Mini-OKRs)', required: true }, { id: '3', type: 'actions', label: 'Required Daily Actions', required: true }, { id: '4', type: 'resources', label: 'Institutional Support Resources', required: false }] });
+  const toggleRequired = (id: string) => { setFormData(prev => ({ ...prev, sections: prev.sections.map(s => s.id === id ? { ...s, required: !s.required } : s) })); };
+  const handleSubmit = () => { onAdd({ id: `pip-${Date.now()}`, name: formData.name || 'New PIP Framework', desc: formData.desc || 'Institutional PIP guidelines.', sections: formData.sections }); };
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+      <div className="bg-white rounded-[2.5rem] w-full max-w-xl shadow-2xl overflow-hidden border border-slate-200 flex flex-col max-h-[90vh]">
+        <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-indigo-50/50"><div className="flex items-center space-x-4"><div className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200"><PipIcon size={24}/></div><div><h3 className="text-xl font-bold text-slate-900 tracking-tight uppercase">PIP Architect</h3><p className="text-xs text-slate-500 mt-1">Define institutional escalation standards</p></div></div><button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 transition-colors"><X size={24}/></button></div>
+        <div className="p-8 space-y-8 overflow-y-auto custom-scrollbar"><div className="space-y-3"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Framework Designation</label><input value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. Sales Unit Escalation Policy" className="w-full bg-white text-slate-900 border-2 border-slate-100 rounded-2xl px-6 py-4 font-bold text-lg outline-none focus:border-indigo-600 transition-all shadow-inner uppercase tracking-tight" /></div>
+        <div className="space-y-4"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Mandatory Policy Sections</label><div className="space-y-2">{formData.sections.map((sec) => (<div key={sec.id} className="p-4 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-between group hover:bg-white transition-all shadow-sm"><div className="flex items-center space-x-4"><div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-all">{sec.type === 'gaps' ? <AlertCircle size={18}/> : sec.type === 'smart' ? <TargetIcon size={18}/> : sec.type === 'actions' ? <ListTodo size={18}/> : <Info size={18}/>}</div><span className="text-xs font-bold text-slate-700 uppercase tracking-tight">{sec.label}</span></div><div className="flex items-center space-x-3"><span className="text-[9px] font-black uppercase text-slate-400">Required</span><div onClick={() => toggleRequired(sec.id)} className={`w-8 h-4 rounded-full relative transition-all cursor-pointer ${sec.required ? 'bg-indigo-600' : 'bg-slate-200'}`}><div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all ${sec.required ? 'right-0.5' : 'left-0.5'}`} /></div></div></div>))}</div></div></div>
+        <div className="p-8 border-t border-slate-100 bg-slate-50 flex items-center justify-end space-x-3"><button onClick={onClose} className="px-6 py-2.5 text-sm font-bold text-slate-500 hover:text-slate-800 transition-colors uppercase tracking-widest text-[11px]">Cancel Architect</button><button disabled={!formData.name} onClick={handleSubmit} className="px-10 py-3 bg-indigo-600 text-white rounded-2xl text-sm font-black uppercase tracking-widest shadow-xl shadow-indigo-200 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-30">Register PIP Policy</button></div>
+      </div>
+    </div>
+  );
+};
 
 export default PolicyStudioPage;
