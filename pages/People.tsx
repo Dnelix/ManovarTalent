@@ -50,6 +50,7 @@ import {
   CheckCircle2,
   ListTodo
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import Pagination from '../components/common/Pagination';
 import { UserRole } from '../types';
 
@@ -150,7 +151,7 @@ const PeoplePage: React.FC<PeoplePageProps> = ({ role = UserRole.ORG_ADMIN }) =>
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [profileTab, setProfileTab] = useState<'info' | 'history' | 'idp'>('info');
   const [isPipActionOpen, setIsPipActionOpen] = useState(false);
-  const [isPipWizardOpen, setIsPipWizardOpen] = useState(false);
+  const navigate = useNavigate();
   
   const itemsPerPage = 10;
   const currentItems = MOCK_PEOPLE.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
@@ -158,7 +159,7 @@ const PeoplePage: React.FC<PeoplePageProps> = ({ role = UserRole.ORG_ADMIN }) =>
 
   const handleOpenPipWizard = () => {
     setIsPipActionOpen(false);
-    setIsPipWizardOpen(true);
+    navigate(`/initiate-pip/${selectedPerson.id}`);
   };
 
   return (
@@ -501,138 +502,6 @@ const PeoplePage: React.FC<PeoplePageProps> = ({ role = UserRole.ORG_ADMIN }) =>
           </div>
         </>
       )}
-
-      {/* PIP Initiation Wizard - Integrated within People Page */}
-      {isPipWizardOpen && selectedPerson && (
-        <PeoplePIPWizard 
-          person={selectedPerson} 
-          onClose={() => setIsPipWizardOpen(false)} 
-        />
-      )}
-    </div>
-  );
-};
-
-/**
- * Shared PIP Wizard for People Page
- */
-const PeoplePIPWizard = ({ person, onClose }: { person: any, onClose: () => void }) => {
-  const [step, setStep] = useState(1);
-  const [formData, setFormData] = useState({
-    gaps: '',
-    smartGoals: '',
-    actions: '',
-    resources: ''
-  });
-
-  const handleNext = () => setStep(step + 1);
-  const handlePrev = () => setStep(step - 1);
-
-  return (
-    <div className="fixed inset-0 z-[350] flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-md animate-in fade-in duration-300">
-      <div className="bg-white rounded-[2.5rem] w-full max-w-2xl shadow-2xl overflow-hidden border-t-[8px] border-indigo-600 flex flex-col max-h-[90vh]">
-        <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-indigo-50/50">
-          <div className="flex items-center space-x-4">
-            <div className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg">
-              <PipIcon size={24}/>
-            </div>
-            <div>
-              <h3 className="text-xl font-bold text-slate-900 tracking-tight">Institutional PIP Initiation</h3>
-              <p className="text-xs text-slate-500 mt-1">Escalation Window: {person.name}</p>
-            </div>
-          </div>
-          <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 transition-colors"><X size={24}/></button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-10 space-y-8 custom-scrollbar">
-          <div className="flex items-center space-x-4 mb-4">
-             {[1, 2, 3].map(s => (
-               <div key={s} className="flex items-center space-x-2">
-                 <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black ${step >= s ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-400'}`}>{s}</div>
-                 {s < 3 && <div className={`w-8 h-0.5 ${step > s ? 'bg-indigo-600' : 'bg-slate-100'}`} />}
-               </div>
-             ))}
-          </div>
-
-          {step === 1 && (
-            <div className="space-y-8 animate-in slide-in-from-right duration-300">
-               <div className="space-y-3">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Institutional Performance Gaps</label>
-                  <textarea 
-                    value={formData.gaps}
-                    onChange={e => setFormData({...formData, gaps: e.target.value})}
-                    placeholder={`Document specific deficiencies based on current health index (${person.health}%)...`}
-                    className="w-full border-2 border-slate-100 rounded-2xl p-5 text-sm font-medium outline-none focus:border-indigo-600 transition-all shadow-inner h-40 resize-none"
-                  />
-               </div>
-               <div className="p-6 bg-indigo-50 border border-indigo-100 rounded-2xl flex items-start space-x-4">
-                  <Info size={20} className="text-indigo-600 mt-1" />
-                  <p className="text-[11px] text-indigo-700 font-medium leading-relaxed">System has auto-populated the employee context. You may attach specific work samples or Jira tickets as evidence once the plan is activated.</p>
-               </div>
-            </div>
-          )}
-
-          {step === 2 && (
-            <div className="space-y-8 animate-in slide-in-from-right duration-300">
-               <div className="space-y-3">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">SMART Success Criteria</label>
-                  <textarea 
-                    value={formData.smartGoals}
-                    onChange={e => setFormData({...formData, smartGoals: e.target.value})}
-                    placeholder="Specific outcomes required for plan exit..."
-                    className="w-full border-2 border-slate-100 rounded-2xl p-5 text-sm font-medium outline-none focus:border-indigo-600 transition-all shadow-inner h-40 resize-none"
-                  />
-               </div>
-               <div className="space-y-3">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Mandatory Action Plan</label>
-                  <textarea 
-                    value={formData.actions}
-                    onChange={e => setFormData({...formData, actions: e.target.value})}
-                    placeholder="Weekly tasks and operational requirements..."
-                    className="w-full border-2 border-slate-100 rounded-2xl p-5 text-sm font-medium outline-none focus:border-indigo-600 transition-all shadow-inner h-32 resize-none"
-                  />
-               </div>
-            </div>
-          )}
-
-          {step === 3 && (
-            <div className="space-y-8 animate-in slide-in-from-right duration-300">
-               <div className="space-y-3">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Institutional Support Allocation</label>
-                  <textarea 
-                    value={formData.resources}
-                    onChange={e => setFormData({...formData, resources: e.target.value})}
-                    placeholder="List training, mentorship, or tools provided to assist success..."
-                    className="w-full border-2 border-slate-100 rounded-2xl p-5 text-sm font-medium outline-none focus:border-indigo-600 transition-all shadow-inner h-32 resize-none"
-                  />
-               </div>
-               <div className="p-8 bg-amber-50 rounded-[2rem] border-2 border-amber-100 flex items-start space-x-6">
-                  <AlertTriangle size={24} className="text-amber-600 mt-1 shrink-0" />
-                  <div>
-                    <p className="text-sm font-black text-amber-900 uppercase tracking-tight">Formal Governance Activation</p>
-                    <p className="text-[11px] text-amber-700 leading-relaxed font-medium mt-1.5">
-                      Activating this plan will notify HR and the employee. All progress tracking for this plan will be audited by the compliance engine.
-                    </p>
-                  </div>
-               </div>
-            </div>
-          )}
-        </div>
-
-        <div className="p-8 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
-           <button onClick={step === 1 ? onClose : handlePrev} className="px-6 py-2.5 text-sm font-bold text-slate-500 hover:text-slate-800 transition-all flex items-center space-x-2 uppercase tracking-widest text-[11px]">
-              <ArrowLeft size={16} />
-              <span>{step === 1 ? 'Discard' : 'Previous'}</span>
-           </button>
-           <button 
-            onClick={step === 3 ? onClose : handleNext}
-            className="px-10 py-3 bg-indigo-600 text-white rounded-2xl text-sm font-black uppercase tracking-widest shadow-xl shadow-indigo-200 hover:scale-[1.02] active:scale-95 transition-all flex items-center space-x-2"
-           >
-              <span>{step === 3 ? 'Activate PIP' : 'Next Step'}</span>
-              <ArrowRight size={16} />
-           </button>
-        </div>
-      </div>
     </div>
   );
 };

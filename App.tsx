@@ -1,4 +1,3 @@
-
 // Removed redundant and malformed UserRole definition and incorrect import
 import React, { useState } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
@@ -15,6 +14,7 @@ import ReportsPage from './pages/Reports';
 import SettingsPage from './pages/Settings';
 import PolicyStudioPage from './pages/PolicyStudio';
 import AuditLogPage from './pages/AuditLog';
+import InitiatePIPPage from './pages/InitiatePIP';
 
 const mockUser: User = {
   id: 'u1',
@@ -58,6 +58,7 @@ const App: React.FC = () => {
           <Route path="/reports" element={<ReportsPage role={activeRole} />} />
           <Route path="/audit-log" element={<AuditLogPage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/initiate-pip/:id" element={<InitiatePIPPage />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </MainLayout>
