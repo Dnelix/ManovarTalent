@@ -49,7 +49,9 @@ import {
   Quote,
   MapPin,
   Calendar,
-  Monitor
+  Monitor,
+  Star,
+  ChevronLeft
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { UserRole } from '../types';
@@ -110,8 +112,8 @@ const INITIAL_MY_OBJECTIVES = [
     confidence: 88,
     status: "Active",
     krs: [
-      { id: 'kr-1', title: "Maintain < 200ms latency on /v1/calibrate", target: 200, current: 182, unit: 'ms', type: 'numeric', selfScore: 182, selfComment: 'Latency is consistently within range despite increased load.', managerScore: 185, evidence: [] },
-      { id: 'kr-2', title: "Scale to 50k concurrent requests", target: 50000, current: 42000, unit: 'req', type: 'numeric', selfScore: 42000, selfComment: 'Cluster optimization handled the bulk of the traffic increase.', managerScore: 45000, evidence: [] }
+      { id: 'kr-1', title: "Maintain < 200ms latency on /v1/calibrate", target: 200, current: 182, unit: 'ms', type: 'numeric', selfScore: 0, selfComment: '', evidence: [] },
+      { id: 'kr-2', title: "Scale to 50k concurrent requests", target: 50000, current: 42000, unit: 'req', type: 'percentage', selfScore: 0, selfComment: '', evidence: [] }
     ]
   },
   { 
@@ -123,7 +125,8 @@ const INITIAL_MY_OBJECTIVES = [
     confidence: 45,
     status: "Active",
     krs: [
-      { id: 'kr-3', title: "Finalize all v3.5 UI specs", target: 100, current: 42, unit: '%', type: 'percentage', selfScore: 42, selfComment: 'Phase 1 and 2 specs are locked. Phase 3 in research.', managerScore: 35, evidence: [] }
+      { id: 'kr-3', title: "Finalize all v3.5 UI specs", target: 100, current: 42, unit: '%', type: 'star', selfScore: 0, selfComment: '', evidence: [] },
+      { id: 'kr-4', title: "Strategic Design Alignment", target: 5, current: 3, unit: 'score', type: '5-scale', selfScore: 0, selfComment: '', evidence: [] }
     ]
   },
 ];
@@ -911,6 +914,7 @@ const AppraisalSummaryView = ({ report, objectives }: { report: any, objectives:
         ))}
       </div>
 
+      {/* Institutional Calibration Summary */}
       <div className="bg-slate-900 rounded-[3rem] p-12 text-white shadow-2xl relative overflow-hidden group border border-slate-800">
          <div className="absolute top-0 right-0 p-12 opacity-10 group-hover:opacity-20 transition-opacity">
             <BrainCircuit size={180} className="text-primary" />
@@ -1437,7 +1441,296 @@ const RequestFeedbackModal = ({ onClose, objectives }: any) => {
   );
 };
 
-const TakeAppraisalWorkspace = ({ onClose, objectives }: any) => {
+/**
+ * Take Appraisal Workspace - High Fidelity Implementation
+ */
+const TakeAppraisalWorkspace = ({ onClose, objectives }: { onClose: () => void, objectives: any[] }) => {
+  const [activeObjIndex, setActiveObjIndex] = useState(0);
+  const [scores, setScores] = useState<Record<string, { score: number, comment: string, evidence: any[] }>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const activeObj = objectives[activeObjIndex];
+
+  const handleUpdateScore = (krId: string, val: number) => {
+    setScores(prev => ({
+      ...prev,
+      [krId]: { ...prev[krId], score: val }
+    }));
+  };
+
+  const handleUpdateComment = (krId: string, val: string) => {
+    setScores(prev => ({
+      ...prev,
+      [krId]: { ...prev[krId], comment: val }
+    }));
+  };
+
+  const handleAttach = (krId: string) => {
+    const file = { id: Date.now(), name: `evidence_snapshot_${Date.now()}.png` };
+    setScores(prev => ({
+      ...prev,
+      [krId]: { ...prev[krId], evidence: [...(prev[krId]?.evidence || []), file] }
+    }));
+  };
+
+  const calculateObjProgress = (obj: any) => {
+    const relevantKrs = obj.krs;
+    if (relevantKrs.length === 0) return 0;
+    const total = relevantKrs.reduce((acc: number, kr: any) => acc + (scores[kr.id]?.score || 0), 0);
+    return Math.round(total / relevantKrs.length);
+  };
+
+  const allDone = objectives.every(obj => obj.krs.every((kr: any) => (scores[kr.id]?.score || 0) > 0));
+
+  if (isSubmitting) {
+    return (
+      <div className="fixed inset-0 z-[500] bg-white flex flex-col items-center justify-center p-12 text-center space-y-8 animate-in fade-in duration-500">
+         <div className="w-24 h-24 bg-green-50 text-green-500 rounded-[2rem] flex items-center justify-center shadow-xl shadow-green-100 border-2 border-green-100 animate-bounce">
+            <CheckCircle2 size={48} />
+         </div>
+         <div className="space-y-3">
+            <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tight leading-none">Self-Appraisal Deployed</h2>
+            <p className="text-slate-500 font-medium">Your record has been locked and dispatched to line management for calibration.</p>
+         </div>
+         <div className="p-6 bg-slate-50 border border-slate-100 rounded-[2rem] w-full max-w-sm text-[10px] font-black uppercase text-slate-400 tracking-widest leading-relaxed">
+            Record Hash: 0x48f2...e931<br/>Timestamp: {new Date().toLocaleString()}
+         </div>
+         <button onClick={onClose} className="px-10 py-4 bg-slate-900 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-2xl hover:scale-105 transition-all">Exit Workspace</button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 z-[250] bg-slate-50 flex flex-col animate-in slide-in-from-bottom duration-500">
+       {/* Workspace Header */}
+       <header className="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-10 shrink-0 shadow-sm z-10">
+          <div className="flex items-center space-x-6">
+             <div className="w-10 h-10 bg-primary text-white rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
+                <ClipboardList size={20} />
+             </div>
+             <div>
+                <h2 className="text-lg font-black text-slate-900 uppercase tracking-tight leading-none">Performance Calibration Workspace</h2>
+                <p className="text-[10px] text-slate-400 font-bold uppercase mt-1.5 tracking-widest">Q3 Horizon • Alex Rivera (Staff)</p>
+             </div>
+          </div>
+          <div className="flex items-center space-x-6">
+             <div className="flex flex-col items-end">
+                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Workspace Integrity</span>
+                <span className="text-[10px] font-bold text-green-600 uppercase flex items-center"><ShieldCheck size={12} className="mr-1"/> Logic Verified</span>
+             </div>
+             <button onClick={onClose} className="p-3 text-slate-400 hover:bg-slate-100 rounded-xl transition-all"><X size={24}/></button>
+          </div>
+       </header>
+
+       <div className="flex-1 flex overflow-hidden">
+          {/* Navigation Sidebar */}
+          <aside className="w-80 border-r border-slate-100 bg-white flex flex-col shrink-0">
+             <div className="p-8 border-b border-slate-50 bg-slate-50/30">
+                <h3 className="text-[11px] font-black text-slate-900 uppercase tracking-widest mb-4">Alignment Steps</h3>
+                <div className="space-y-2">
+                   {objectives.map((obj, i) => {
+                     const progress = calculateObjProgress(obj);
+                     const isActive = activeObjIndex === i;
+                     return (
+                       <button 
+                        key={obj.id} 
+                        onClick={() => setActiveObjIndex(i)}
+                        className={`w-full p-4 rounded-2xl border-2 transition-all flex items-center justify-between group ${isActive ? 'bg-primary border-primary text-white shadow-xl shadow-primary/10' : 'bg-white border-slate-100 text-slate-600 hover:border-slate-300'}`}
+                       >
+                          <div className="flex items-center space-x-3 min-w-0">
+                             <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${isActive ? 'bg-white/20' : 'bg-slate-50 text-slate-400'}`}>
+                                {i + 1}
+                             </div>
+                             <span className="text-[11px] font-black uppercase tracking-tight truncate pr-2">{obj.title}</span>
+                          </div>
+                          {progress > 0 && <Check size={16} className={isActive ? 'text-white' : 'text-green-500'} />}
+                       </button>
+                     );
+                   })}
+                </div>
+             </div>
+             
+             <div className="mt-auto p-8 border-t border-slate-50 space-y-6">
+                <div className="space-y-2">
+                   <div className="flex justify-between items-center text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                      <span>Total Completion</span>
+                      <span>{Math.round((objectives.filter(obj => calculateObjProgress(obj) > 0).length / objectives.length) * 100)}%</span>
+                   </div>
+                   <div className="h-1.5 w-full bg-slate-50 rounded-full overflow-hidden shadow-inner">
+                      <div className="h-full bg-primary" style={{ width: `${(objectives.filter(obj => calculateObjProgress(obj) > 0).length / objectives.length) * 100}%` }} />
+                   </div>
+                </div>
+                <button 
+                  disabled={!allDone}
+                  onClick={() => setIsSubmitting(true)}
+                  className={`w-full py-4 rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl transition-all ${allDone ? 'bg-slate-900 text-white shadow-slate-200 hover:scale-105 active:scale-95' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}`}
+                >
+                   Finalize Record
+                </button>
+             </div>
+          </aside>
+
+          {/* Main Content Area */}
+          <main className="flex-1 overflow-y-auto custom-scrollbar p-12 bg-white">
+             <div className="max-w-4xl mx-auto space-y-12">
+                {/* Objective Header */}
+                <div className="space-y-6 animate-in slide-in-from-bottom-2 duration-300">
+                   <div className="flex items-center space-x-4">
+                      <div className={`p-4 rounded-2xl ${activeObj.type === 'KPI' ? 'bg-secondary/10 text-secondary' : 'bg-primary/10 text-primary'}`}>
+                        {activeObj.type === 'KPI' ? <Zap size={32} /> : <Target size={32} />}
+                      </div>
+                      <div>
+                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Calibrating Objective {activeObjIndex + 1} of {objectives.length}</span>
+                         <h1 className="text-3xl font-black text-slate-900 uppercase tracking-tight leading-none mt-1">{activeObj.title}</h1>
+                      </div>
+                   </div>
+                   <div className="p-6 bg-slate-50 border border-slate-100 rounded-[2.5rem] flex items-center justify-between shadow-inner">
+                      <p className="text-sm font-medium text-slate-500 italic max-w-xl leading-relaxed">
+                        Assess your performance across the specific Key Results defined for this objective. Be prepared to provide qualitative artifacts as evidence.
+                      </p>
+                      <div className="text-right">
+                         <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Calculated Score</p>
+                         <p className="text-3xl font-black text-primary">{calculateObjProgress(activeObj)}%</p>
+                      </div>
+                   </div>
+                </div>
+
+                {/* Key Results Inputs */}
+                <div className="space-y-8 pb-20">
+                   {activeObj.krs.map((kr: any, idx: number) => (
+                     <div key={kr.id} className="bg-white border border-slate-200 rounded-[3rem] p-10 shadow-sm space-y-10 group hover:border-primary/20 transition-all duration-500">
+                        <div className="flex items-start justify-between border-b border-slate-50 pb-6">
+                           <div className="flex items-center space-x-5">
+                              <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400 group-hover:bg-primary/5 group-hover:text-primary transition-colors">
+                                 <GitBranch size={20} />
+                              </div>
+                              <div>
+                                 <h3 className="text-lg font-bold text-slate-800 uppercase tracking-tight group-hover:text-primary transition-colors">{kr.title}</h3>
+                                 <p className="text-[10px] font-black text-slate-400 uppercase mt-1 tracking-widest">Logic: {kr.type} • Target: {kr.target}{kr.unit}</p>
+                              </div>
+                           </div>
+                           <div className="px-3 py-1 bg-slate-50 border border-slate-100 rounded-xl text-[9px] font-black text-slate-400 uppercase">Vector {idx + 1}</div>
+                        </div>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+                           <div className="lg:col-span-4 space-y-6">
+                              <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest px-1">Calibration Score</label>
+                              <KRScoreInput type={kr.type} value={scores[kr.id]?.score || 0} onChange={(v) => handleUpdateScore(kr.id, v)} />
+                           </div>
+
+                           <div className="lg:col-span-8 space-y-8">
+                              <div className="space-y-4">
+                                 <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest px-1">Institutional Context (Narrative)</label>
+                                 <textarea 
+                                    value={scores[kr.id]?.comment || ''}
+                                    onChange={(e) => handleUpdateComment(kr.id, e.target.value)}
+                                    placeholder="Provide qualitative justification for this rating..."
+                                    className="w-full bg-slate-50 border-none rounded-[2rem] p-6 text-sm font-medium outline-none focus:bg-white focus:ring-4 focus:ring-primary/5 transition-all h-32 resize-none shadow-inner"
+                                 />
+                              </div>
+
+                              <div className="space-y-4">
+                                 <div className="flex items-center justify-between px-1">
+                                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Evidence Artifacts</label>
+                                    <button onClick={() => handleAttach(kr.id)} className="text-[10px] font-bold text-primary hover:underline uppercase flex items-center space-x-1">
+                                       <Paperclip size={10} />
+                                       <span>Attach Record</span>
+                                    </button>
+                                 </div>
+                                 <div className="flex flex-wrap gap-2">
+                                    {(scores[kr.id]?.evidence || []).map((file: any) => (
+                                       <div key={file.id} className="flex items-center space-x-3 px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl animate-in zoom-in-95">
+                                          <FileIcon size={12} className="text-slate-400" />
+                                          <span className="text-[10px] font-bold text-slate-600 truncate max-w-[120px]">{file.name}</span>
+                                          <button className="text-slate-300 hover:text-red-500"><X size={12}/></button>
+                                       </div>
+                                    ))}
+                                    {(scores[kr.id]?.evidence || []).length === 0 && (
+                                       <button onClick={() => handleAttach(kr.id)} className="w-full border-2 border-dashed border-slate-100 rounded-2xl py-6 flex flex-col items-center justify-center text-slate-300 hover:text-primary hover:border-primary/30 transition-all group/up">
+                                          <Upload size={18} className="mb-1 group-hover/up:scale-110 transition-transform" />
+                                          <span className="text-[9px] font-black uppercase tracking-widest">Drop Artifacts Here</span>
+                                       </button>
+                                    )}
+                                 </div>
+                              </div>
+                           </div>
+                        </div>
+                     </div>
+                   ))}
+
+                   <div className="flex items-center justify-between pt-12">
+                      <button 
+                        disabled={activeObjIndex === 0}
+                        onClick={() => setActiveObjIndex(activeObjIndex - 1)}
+                        className="flex items-center space-x-2 px-8 py-4 border border-slate-200 bg-white text-slate-600 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all disabled:opacity-30 shadow-sm"
+                      >
+                         <ChevronLeft size={16} />
+                         <span>Previous Pillar</span>
+                      </button>
+                      <button 
+                        disabled={activeObjIndex === objectives.length - 1}
+                        onClick={() => setActiveObjIndex(activeObjIndex + 1)}
+                        className="flex items-center space-x-2 px-12 py-4 bg-primary text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-30"
+                      >
+                         <span>Next Strategic Anchor</span>
+                         <ChevronRight size={16} />
+                      </button>
+                   </div>
+                </div>
+             </div>
+          </main>
+       </div>
+    </div>
+  );
+};
+
+/**
+ * Dynamic Scoring Input Component
+ */
+const KRScoreInput = ({ type, value, onChange }: { type: string, value: number, onChange: (v: number) => void }) => {
+  if (type === 'star') {
+    return (
+      <div className="flex items-center space-x-2">
+        {[1, 2, 3, 4, 5].map(s => (
+          <button key={s} onClick={() => onChange(s * 20)} className={`p-1 transition-all ${value >= s * 20 ? 'text-amber-500' : 'text-slate-200 hover:text-amber-200'}`}>
+            <Star size={28} fill={value >= s * 20 ? 'currentColor' : 'none'} />
+          </button>
+        ))}
+      </div>
+    );
+  }
+
+  if (type === '5-scale') {
+    return (
+      <div className="grid grid-cols-5 gap-2">
+        {[1, 2, 3, 4, 5].map(s => (
+          <button key={s} onClick={() => onChange(s * 20)} className={`h-12 rounded-xl text-[10px] font-black transition-all border-2 ${value === s * 20 ? 'bg-primary border-primary text-white shadow-lg' : 'bg-slate-50 border-slate-100 text-slate-400 hover:border-primary/30'}`}>
+            {s}
+          </button>
+        ))}
+      </div>
+    );
+  }
+
+  if (type === 'percentage' || type === 'numeric') {
+    return (
+      <div className="relative group">
+         <input 
+            type="number" 
+            value={value || ''} 
+            onChange={(e) => onChange(Math.min(100, Math.max(0, parseInt(e.target.value) || 0)))}
+            placeholder="Score..."
+            className="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 font-black text-2xl outline-none focus:ring-4 focus:ring-primary/5 transition-all shadow-inner" 
+         />
+         <span className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-300 font-black text-xl">%</span>
+      </div>
+    );
+  }
+
+  return null;
+};
+
+const TakeAppraisalWorkspaceOld = ({ onClose, objectives }: any) => {
   return (
     <div className="fixed inset-0 z-[250] bg-slate-50/95 backdrop-blur-xl flex flex-col p-20 items-center justify-center">
        <div className="text-2xl font-black text-slate-900 mb-8 uppercase tracking-widest">Appraisal Workspace active</div>
