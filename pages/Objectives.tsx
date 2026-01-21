@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { 
   Table as TableIcon, 
@@ -93,7 +94,7 @@ const ObjectivesPage: React.FC<ObjectivesPageProps> = ({ role }) => {
 
   // Define Objective State
   const [isDefineModalOpen, setIsDefineModalOpen] = useState(false);
-  const [defineObjectiveType, setDefineObjectiveType] = useState<'Individual' | 'Department' | null>(null);
+  const [defineObjectiveType, setDefineObjectiveType] = useState<'Individual' | 'Department' | 'Global' | null>(null);
   const [isChoiceDropdownOpen, setIsChoiceDropdownOpen] = useState(false);
 
   const isLeadership = [UserRole.ORG_ADMIN, UserRole.EXECUTIVE, UserRole.MANAGER].includes(role);
@@ -130,7 +131,7 @@ const ObjectivesPage: React.FC<ObjectivesPageProps> = ({ role }) => {
     }
   };
 
-  const selectDefineType = (type: 'Individual' | 'Department') => {
+  const selectDefineType = (type: 'Individual' | 'Department' | 'Global') => {
     setDefineObjectiveType(type);
     setIsDefineModalOpen(true);
     setIsChoiceDropdownOpen(false);
@@ -230,9 +231,9 @@ const ObjectivesPage: React.FC<ObjectivesPageProps> = ({ role }) => {
         
         <div className="flex items-center space-x-3">
           <div className="flex items-center space-x-1 bg-white border border-slate-200 p-1 rounded-xl shadow-sm">
-            <ViewToggle active={viewMode === 'table'} onClick={() => setViewMode('table'} icon={<TableIcon size={14} />} label="Table" />
-            <ViewToggle active={viewMode === 'tree'} onClick={() => setViewMode('tree'} icon={<Layers size={14} />} label="Tree" />
-            <ViewToggle active={viewMode === 'chart'} onClick={() => setViewMode('chart'} icon={<GitBranch size={14} />} label="Chart" />
+            <ViewToggle active={viewMode === 'table'} onClick={() => setViewMode('table')} icon={<TableIcon size={14} />} label="Table" />
+            <ViewToggle active={viewMode === 'tree'} onClick={() => setViewMode('tree')} icon={<Layers size={14} />} label="Tree" />
+            <ViewToggle active={viewMode === 'chart'} onClick={() => setViewMode('chart')} icon={<GitBranch size={14} />} label="Chart" />
           </div>
           
           <div className="relative">
@@ -271,6 +272,18 @@ const ObjectivesPage: React.FC<ObjectivesPageProps> = ({ role }) => {
                       <div>
                          <p className="text-xs font-black text-slate-900 uppercase">Departmental Goal</p>
                          <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tighter mt-1">Unit level strategic cascading</p>
+                      </div>
+                   </button>
+                   <button 
+                    onClick={() => selectDefineType('Global')}
+                    className="w-full flex items-center space-x-4 px-4 py-4 hover:bg-slate-50 rounded-2xl transition-all text-left group"
+                   >
+                      <div className="w-10 h-10 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center group-hover:bg-amber-600 group-hover:text-white transition-all shadow-inner">
+                         <Target size={18} />
+                      </div>
+                      <div>
+                         <p className="text-xs font-black text-slate-900 uppercase">Global Goal</p>
+                         <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tighter mt-1">Institutional North Star alignment</p>
                       </div>
                    </button>
                 </div>
@@ -440,7 +453,7 @@ const ObjectivesPage: React.FC<ObjectivesPageProps> = ({ role }) => {
 /**
  * Define Objective Wizard Component
  */
-const DefineObjectiveWizard = ({ type, onClose }: { type: 'Individual' | 'Department', onClose: () => void }) => {
+const DefineObjectiveWizard = ({ type, onClose }: { type: 'Individual' | 'Department' | 'Global', onClose: () => void }) => {
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     framework: 'OKR',
@@ -460,7 +473,9 @@ const DefineObjectiveWizard = ({ type, onClose }: { type: 'Individual' | 'Depart
   // Dynamic Parent Selection Options based on type
   const parentOptions = type === 'Individual' 
     ? MOCK_OBJECTIVES.filter(o => o.level === 'Department')
-    : MOCK_OBJECTIVES.filter(o => o.level === 'Global');
+    : type === 'Department'
+      ? MOCK_OBJECTIVES.filter(o => o.level === 'Global')
+      : []; // Global goals don't have parents in this simple hierarchy
 
   const addKR = () => {
     setKrs([...krs, { id: Date.now().toString(), title: '', weight: 0, tracking: 'Periodic Review', scoring: 'Percentage', start: 0, target: 100 }]);
@@ -475,7 +490,7 @@ const DefineObjectiveWizard = ({ type, onClose }: { type: 'Individual' | 'Depart
     setKrs(krs.map(kr => kr.id === id ? { ...kr, [field]: value } : kr));
   };
 
-  const canGoToStep2 = formData.name && formData.parentGoal;
+  const canGoToStep2 = formData.name && (type === 'Global' || formData.parentGoal);
   const canFinalize = krs.every(kr => kr.title && kr.weight > 0);
 
   return (
@@ -485,8 +500,8 @@ const DefineObjectiveWizard = ({ type, onClose }: { type: 'Individual' | 'Depart
         {/* Header */}
         <div className="p-10 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
            <div className="flex items-center space-x-6">
-              <div className={`w-14 h-14 ${type === 'Individual' ? 'bg-indigo-600' : 'bg-primary'} text-white rounded-2xl flex items-center justify-center shadow-xl`}>
-                 {type === 'Individual' ? <UserPlus size={28} /> : <Building2 size={28} />}
+              <div className={`w-14 h-14 ${type === 'Individual' ? 'bg-indigo-600' : type === 'Global' ? 'bg-amber-500' : 'bg-primary'} text-white rounded-2xl flex items-center justify-center shadow-xl`}>
+                 {type === 'Individual' ? <UserPlus size={28} /> : type === 'Global' ? <Target size={28} /> : <Building2 size={28} />}
               </div>
               <div>
                  <h3 className="text-2xl font-black text-slate-900 tracking-tight uppercase leading-none">Define {type} Objective</h3>
@@ -569,29 +584,43 @@ const DefineObjectiveWizard = ({ type, onClose }: { type: 'Individual' | 'Depart
                          </div>
                       </div>
 
-                      <div className="space-y-3">
-                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Vertical Alignment (Compulsory)</label>
-                         <div className="space-y-2">
-                            {parentOptions.map(opt => (
-                              <button 
-                                key={opt.id}
-                                onClick={() => setFormData({...formData, parentGoal: opt.code})}
-                                className={`w-full p-4 border-2 rounded-2xl flex items-center justify-between transition-all text-left ${formData.parentGoal === opt.code ? 'bg-primary/5 border-primary shadow-sm' : 'bg-white border-slate-100 hover:border-slate-300'}`}
-                              >
-                                 <div className="flex items-center space-x-3">
-                                    <div className={`p-2 rounded-lg ${formData.parentGoal === opt.code ? 'bg-primary text-white' : 'bg-slate-50 text-slate-400'}`}>
-                                       <LinkIcon size={14} />
-                                    </div>
-                                    <div>
-                                       <p className="text-xs font-black uppercase text-slate-900 leading-none">{opt.code}</p>
-                                       <p className="text-[10px] text-slate-500 font-bold truncate max-w-[240px] mt-1">{opt.title}</p>
-                                    </div>
-                                 </div>
-                                 {formData.parentGoal === opt.code && <CheckCircle2 size={18} className="text-primary" />}
-                              </button>
-                            ))}
-                         </div>
-                      </div>
+                      {type !== 'Global' && (
+                        <div className="space-y-3">
+                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Vertical Alignment (Compulsory)</label>
+                           <div className="space-y-2">
+                              {parentOptions.map(opt => (
+                                <button 
+                                  key={opt.id}
+                                  onClick={() => setFormData({...formData, parentGoal: opt.code})}
+                                  className={`w-full p-4 border-2 rounded-2xl flex items-center justify-between transition-all text-left ${formData.parentGoal === opt.code ? 'bg-primary/5 border-primary shadow-sm' : 'bg-white border-slate-100 hover:border-slate-300'}`}
+                                >
+                                   <div className="flex items-center space-x-3">
+                                      <div className={`p-2 rounded-lg ${formData.parentGoal === opt.code ? 'bg-primary text-white' : 'bg-slate-50 text-slate-400'}`}>
+                                         <LinkIcon size={14} />
+                                      </div>
+                                      <div>
+                                         <p className="text-xs font-black uppercase text-slate-900 leading-none">{opt.code}</p>
+                                         <p className="text-[10px] text-slate-500 font-bold truncate max-w-[240px] mt-1">{opt.title}</p>
+                                      </div>
+                                   </div>
+                                   {formData.parentGoal === opt.code && <CheckCircle2 size={18} className="text-primary" />}
+                                </button>
+                              ))}
+                           </div>
+                        </div>
+                      )}
+                      
+                      {type === 'Global' && (
+                        <div className="p-6 bg-slate-50 border border-slate-100 rounded-3xl space-y-4">
+                           <div className="flex items-center space-x-3 text-amber-600">
+                              <Target size={20} />
+                              <span className="text-xs font-black uppercase tracking-widest">Tier 0: Strategic Root</span>
+                           </div>
+                           <p className="text-[11px] text-slate-500 font-medium leading-relaxed italic">
+                              Global objectives represent the ultimate institutional anchors. They do not require a parent for alignment but will act as parents for departmental cascades.
+                           </p>
+                        </div>
+                      )}
                    </div>
                 </div>
              </div>
