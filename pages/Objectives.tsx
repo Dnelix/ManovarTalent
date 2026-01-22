@@ -114,6 +114,7 @@ interface ObjectivesPageProps {
 const ObjectivesPage: React.FC<ObjectivesPageProps> = ({ role }) => {
   const isEmployee = role === UserRole.EMPLOYEE;
   const isOrgAdmin = role === UserRole.ORG_ADMIN;
+  const isManager = role === UserRole.MANAGER;
   
   // Initialize tab based on role
   const [activeTab, setActiveTab] = useState<'Individual' | 'Department' | 'Global'>(isEmployee ? 'Individual' : 'Individual');
@@ -124,7 +125,7 @@ const ObjectivesPage: React.FC<ObjectivesPageProps> = ({ role }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
 
-  // Admin Talent Filter State (Individual)
+  // Admin/Manager Talent Filter State (Individual)
   const [selectedEmployee, setSelectedEmployee] = useState<string>('All Employees');
   const [isTalentDropdownOpen, setIsTalentDropdownOpen] = useState(false);
   const [talentSearch, setTalentSearch] = useState('');
@@ -168,18 +169,18 @@ const ObjectivesPage: React.FC<ObjectivesPageProps> = ({ role }) => {
   const filteredGoals = useMemo(() => {
     let goals = MOCK_OBJECTIVES.filter(o => o.level === activeTab);
     
-    // Individual filtering
-    if (activeTab === 'Individual' && isOrgAdmin && selectedEmployee !== 'All Employees') {
+    // Individual filtering (Org Admin or Manager)
+    if (activeTab === 'Individual' && (isOrgAdmin || isManager) && selectedEmployee !== 'All Employees') {
       goals = goals.filter(g => g.owner === selectedEmployee);
     }
     
-    // Department filtering
+    // Department filtering (Org Admin only)
     if (activeTab === 'Department' && isOrgAdmin && selectedDeptFilter !== 'All Departments') {
       goals = goals.filter(g => g.ownerDept === selectedDeptFilter);
     }
     
     return goals;
-  }, [activeTab, selectedEmployee, selectedDeptFilter, isOrgAdmin]);
+  }, [activeTab, selectedEmployee, selectedDeptFilter, isOrgAdmin, isManager]);
 
   const paginatedGoals = useMemo(() => {
     return filteredGoals.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
@@ -422,7 +423,7 @@ const ObjectivesPage: React.FC<ObjectivesPageProps> = ({ role }) => {
                     <LevelTab label="Individual Goals" active={activeTab === 'Individual'} onClick={() => {setActiveTab('Individual'); setCurrentPage(1);}} icon={<UserPlus size={12}/>} />
                     <LevelTab label="Departmental Goals" active={activeTab === 'Department'} onClick={() => {setActiveTab('Department'); setCurrentPage(1);}} icon={<Briefcase size={12}/>} />
                     <LevelTab 
-                      label={isOrgAdmin ? "Company Goals" : "Global Strategy"} 
+                      label={(isOrgAdmin || isManager) ? "Company Goals" : "Global Strategy"} 
                       active={activeTab === 'Global'} 
                       onClick={() => {setActiveTab('Global'); setCurrentPage(1);}} 
                       icon={<Target size={12}/>} 
@@ -467,9 +468,9 @@ const ObjectivesPage: React.FC<ObjectivesPageProps> = ({ role }) => {
                     {isEmployee ? 'My Personalized Performance Anchors' : `${activeTab} Performance anchors`}
                  </h3>
                  
-                 {/* SEARCH & SELECT TALENT (Org Admin Only) */}
+                 {/* SEARCH & SELECT TALENT (Org Admin & Manager Only) */}
                  <div className="flex items-center space-x-4">
-                    {isOrgAdmin && activeTab === 'Individual' ? (
+                    {(isOrgAdmin || isManager) && activeTab === 'Individual' ? (
                        <div className="relative" ref={talentDropdownRef}>
                           <button 
                             onClick={() => setIsTalentDropdownOpen(!isTalentDropdownOpen)}
@@ -581,7 +582,7 @@ const ObjectivesPage: React.FC<ObjectivesPageProps> = ({ role }) => {
                     <tr>
                       <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">ID</th>
                       <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Objective</th>
-                      {activeTab === 'Individual' && isOrgAdmin && selectedEmployee === 'All Employees' && <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Owner</th>}
+                      {activeTab === 'Individual' && (isOrgAdmin || isManager) && selectedEmployee === 'All Employees' && <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Owner</th>}
                       {activeTab === 'Department' && isOrgAdmin && selectedDeptFilter === 'All Departments' && <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Owner Unit</th>}
                       {activeTab === 'Individual' && <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Mapped Dept Goal</th>}
                       {activeTab === 'Department' && <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Mapped Global Goal</th>}
@@ -604,7 +605,7 @@ const ObjectivesPage: React.FC<ObjectivesPageProps> = ({ role }) => {
                           <p className="text-sm font-bold text-slate-900 group-hover:text-primary transition-colors uppercase tracking-tight">{obj.title}</p>
                           <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1 block">{obj.type} Framework</span>
                         </td>
-                        {activeTab === 'Individual' && isOrgAdmin && selectedEmployee === 'All Employees' && (
+                        {activeTab === 'Individual' && (isOrgAdmin || isManager) && selectedEmployee === 'All Employees' && (
                           <td className="px-8 py-6">
                             <div className="flex items-center space-x-2">
                                <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-[8px] font-black text-slate-400 uppercase">
@@ -640,9 +641,7 @@ const ObjectivesPage: React.FC<ObjectivesPageProps> = ({ role }) => {
                         )}
                         <td className="px-8 py-6">
                           <div className="flex items-center justify-center space-x-4">
-                             <div className="w-20 h-2 bg-slate-100 rounded-full overflow-hidden shrink-0 shadow-inner">
-                                <div className="h-full bg-primary" style={{ width: `${obj.progress}%` }}></div>
-                             </div>
+                             <div className="h-full bg-primary" style={{ width: `${obj.progress}%` }}></div>
                              <span className="text-[11px] font-black text-slate-900">{obj.progress}%</span>
                           </div>
                         </td>
@@ -913,7 +912,7 @@ const DefineObjectiveWizard = ({ type, onClose }: { type: 'Individual' | 'Depart
         {/* Header */}
         <div className="p-10 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
            <div className="flex items-center space-x-6">
-              <div className={`w-14 h-14 ${type === 'Individual' ? 'bg-indigo-600' : type === 'Global' ? 'bg-amber-500' : 'bg-primary'} text-white rounded-2xl flex items-center justify-center shadow-xl`}>
+              <div className={`w-14 h-14 ${type === 'Individual' ? 'bg-indigo-600' : type === 'Global' ? 'bg-amber-50' : 'bg-primary'} text-white rounded-2xl flex items-center justify-center shadow-xl`}>
                  {type === 'Individual' ? <UserPlus size={28} /> : type === 'Global' ? <Target size={28} /> : <Building2 size={28} />}
               </div>
               <div>
