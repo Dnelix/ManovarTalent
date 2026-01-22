@@ -37,34 +37,61 @@ import {
   FileText,
   Workflow,
   AlertTriangle,
-  Check
+  Check,
+  User,
+  Users,
+  Trophy,
+  BarChart3,
+  TrendingUp,
+  Scale,
+  /* Added Sparkles to fix "Cannot find name 'Sparkles'" error */
+  Sparkles
 } from 'lucide-react';
 import Pagination from '../components/common/Pagination';
 import { UserRole } from '../types';
 
-// Enhanced Mock Data with identifiers and mapping codes
+// Enhanced Mock Data with owner names for filtering
 const MOCK_OBJECTIVES = [
   // Global Level
-  { id: 'glo-1', code: 'GLO-01', title: "Achieve AI Product Leadership", level: "Global", mappedTo: "Product Leadership Strategy", type: "OKR", progress: 85, status: "Active" },
-  { id: 'glo-2', code: 'GLO-02', title: "Global Infrastructure Resilience", level: "Global", mappedTo: "Operational Excellence", type: "OKR", progress: 72, status: "Active" },
-  { id: 'glo-3', code: 'GLO-03', title: "Market Share Expansion EMEA", level: "Global", mappedTo: "Revenue Growth", type: "OKR", progress: 45, status: "Active" },
-  { id: 'glo-4', code: 'GLO-04', title: "Customer Centricity Re-platforming", level: "Global", mappedTo: "Customer Experience", type: "OKR", progress: 90, status: "Active" },
-  { id: 'glo-5', code: 'GLO-05', title: "Zero-Trust Security Initiative", level: "Global", mappedTo: "Compliance & Safety", type: "OKR", progress: 30, status: "Active" },
+  { id: 'glo-1', code: 'GLO-01', title: "Achieve AI Product Leadership", level: "Global", mappedTo: "Product Leadership Strategy", type: "OKR", progress: 85, status: "Active", weight: 30, confidence: 92, owner: "Alex Rivera" },
+  { id: 'glo-2', code: 'GLO-02', title: "Global Infrastructure Resilience", level: "Global", mappedTo: "Operational Excellence", type: "OKR", progress: 72, status: "Active", weight: 25, confidence: 85, owner: "Alex Rivera" },
+  { id: 'glo-3', code: 'GLO-03', title: "Market Share Expansion EMEA", level: "Global", mappedTo: "Revenue Growth", type: "OKR", progress: 45, status: "Active", weight: 20, confidence: 70, owner: "Alex Rivera" },
+  { id: 'glo-4', code: 'GLO-04', title: "Customer Centricity Re-platforming", level: "Global", mappedTo: "Customer Experience", type: "OKR", progress: 90, status: "Active", weight: 15, confidence: 95, owner: "Alex Rivera" },
+  { id: 'glo-5', code: 'GLO-05', title: "Zero-Trust Security Initiative", level: "Global", mappedTo: "Compliance & Safety", type: "OKR", progress: 30, status: "Active", weight: 10, confidence: 60, owner: "Alex Rivera" },
 
   // Departmental Level
-  { id: 'dep-1', code: 'DEP-01', title: "API Efficiency Optimization", level: "Department", ownerDept: "Core Engineering", parentCode: 'GLO-01', type: "OKR", progress: 65, status: "Active" },
-  { id: 'dep-2', code: 'DEP-02', title: "Cloud Cost Efficiency Program", level: "Department", ownerDept: "Infrastructure", parentCode: 'GLO-02', type: "KPI", progress: 88, status: "Active" },
-  { id: 'dep-3', code: 'DEP-03', title: "EMEA Sales Pipeline Velocity", level: "Department", ownerDept: "Growth & Sales", parentCode: 'GLO-03', type: "OKR", progress: 54, status: "Active" },
-  { id: 'dep-4', code: 'DEP-04', title: "v4 UI Calibration Polish", level: "Department", ownerDept: "Product Strategy", parentCode: 'GLO-04', type: "OKR", progress: 92, status: "Active" },
-  { id: 'dep-5', code: 'DEP-05', title: "Auth-Layer Security Refactor", level: "Department", ownerDept: "Security Unit", parentCode: 'GLO-05', type: "SMART", progress: 40, status: "Active" },
+  { id: 'dep-1', code: 'DEP-01', title: "API Efficiency Optimization", level: "Department", ownerDept: "Core Engineering", parentCode: 'GLO-01', type: "OKR", progress: 65, status: "Active", weight: 25, confidence: 80, owner: "Sarah Chen" },
+  { id: 'dep-2', code: 'DEP-02', title: "Cloud Cost Efficiency Program", level: "Department", ownerDept: "Infrastructure", parentCode: 'GLO-02', type: "KPI", progress: 88, status: "Active", weight: 30, confidence: 90, owner: "Marcus Vane" },
+  { id: 'dep-3', code: 'DEP-03', title: "EMEA Sales Pipeline Velocity", level: "Department", ownerDept: "Growth & Sales", parentCode: 'GLO-03', type: "OKR", progress: 54, status: "Active", weight: 20, confidence: 75, owner: "Elena Rossi" },
+  { id: 'dep-4', code: 'DEP-04', title: "v4 UI Calibration Polish", level: "Department", ownerDept: "Product Strategy", parentCode: 'GLO-04', type: "OKR", progress: 92, status: "Active", weight: 15, confidence: 92, owner: "Sarah Chen" },
+  { id: 'dep-5', code: 'DEP-05', title: "Auth-Layer Security Refactor", level: "Department", ownerDept: "Security Unit", parentCode: 'GLO-05', type: "SMART", progress: 40, status: "Active", weight: 10, confidence: 65, owner: "David Wright" },
 
-  // Individual Level
-  { id: 'ind-1', code: 'IND-01', title: "Implement Semantic Layer for v4", level: "Individual", parentCode: 'DEP-01', type: "OKR", progress: 78, status: "Active" },
-  { id: 'ind-2', code: 'IND-02', title: "Docker Image Multi-Stage Refactor", level: "Individual", parentCode: 'DEP-02', type: "OKR", progress: 95, status: "Active" },
-  { id: 'ind-3', code: 'IND-03', title: "DACH Region Outreach Velocity", level: "Individual", parentCode: 'DEP-03', type: "KPI", progress: 33, status: "Active" },
-  { id: 'ind-4', code: 'IND-04', title: "Design Component Audit Q3", level: "Individual", parentCode: 'DEP-04', type: "OKR", progress: 85, status: "Active" },
-  { id: 'ind-5', code: 'IND-05', title: "Pen-Testing Feedback Loop v2", level: "Individual", parentCode: 'DEP-05', type: "OKR", progress: 20, status: "Active" },
-  { id: 'ind-6', code: 'IND-06', title: "SDK Integration Documentation", level: "Individual", parentCode: 'DEP-01', type: "SMART", progress: 100, status: "Active" }
+  // Individual Level - Assigned to specific people
+  { id: 'ind-1', code: 'IND-01', title: "Implement Semantic Layer for v4", level: "Individual", parentCode: 'DEP-01', type: "OKR", progress: 78, status: "Active", owner: "Sarah Chen", weight: 40, confidence: 85 },
+  { id: 'ind-2', code: 'IND-02', title: "Docker Image Multi-Stage Refactor", level: "Individual", parentCode: 'DEP-02', type: "OKR", progress: 95, status: "Active", owner: "Marcus Vane", weight: 50, confidence: 98 },
+  { id: 'ind-3', code: 'IND-03', title: "DACH Region Outreach Velocity", level: "Individual", parentCode: 'DEP-03', type: "KPI", progress: 33, status: "Active", owner: "Jordan Smith", weight: 30, confidence: 60 },
+  { id: 'ind-4', code: 'IND-04', title: "Design Component Audit Q3", level: "Individual", parentCode: 'DEP-04', type: "OKR", progress: 85, status: "Active", owner: "Elena Rossi", weight: 25, confidence: 90 },
+  { id: 'ind-5', code: 'IND-05', title: "Pen-Testing Feedback Loop v2", level: "Individual", parentCode: 'DEP-05', type: "OKR", progress: 20, status: "Active", owner: "David Wright", weight: 35, confidence: 55 },
+  { id: 'ind-6', code: 'IND-06', title: "SDK Integration Documentation", level: "Individual", parentCode: 'DEP-01', type: "SMART", progress: 100, status: "Active", owner: "Sarah Chen", weight: 20, confidence: 100 },
+  { id: 'ind-7', code: 'IND-07', title: "Cloud Cost Tagging Automation", level: "Individual", parentCode: 'DEP-02', type: "KPI", progress: 60, status: "Active", owner: "Marcus Vane", weight: 30, confidence: 80 }
+];
+
+const MOCK_EMPLOYEES_LIST = [
+  { id: 'all', name: 'All Employees', avatar: null },
+  { id: 'u1', name: "Sarah Chen", avatar: "https://picsum.photos/seed/sarah/100/100" },
+  { id: 'u2', name: "Marcus Vane", avatar: "https://picsum.photos/seed/marcus/100/100" },
+  { id: 'u3', name: "Jordan Smith", avatar: "https://picsum.photos/seed/jordan/100/100" },
+  { id: 'u4', name: "Elena Rossi", avatar: "https://picsum.photos/seed/elena/100/100" },
+  { id: 'u5', name: "David Wright", avatar: "https://picsum.photos/seed/david/100/100" },
+];
+
+const MOCK_DEPARTMENTS_LIST = [
+  { id: 'all', name: 'All Departments' },
+  { id: 'd1', name: 'Core Engineering' },
+  { id: 'd2', name: 'Infrastructure' },
+  { id: 'd3', name: 'Growth & Sales' },
+  { id: 'd4', name: 'Product Strategy' },
+  { id: 'd5', name: 'Security Unit' },
 ];
 
 const MOCK_REVIEW_QUEUE = [
@@ -85,7 +112,11 @@ interface ObjectivesPageProps {
 }
 
 const ObjectivesPage: React.FC<ObjectivesPageProps> = ({ role }) => {
-  const [activeTab, setActiveTab] = useState<'Individual' | 'Department' | 'Global'>('Individual');
+  const isEmployee = role === UserRole.EMPLOYEE;
+  const isOrgAdmin = role === UserRole.ORG_ADMIN;
+  
+  // Initialize tab based on role
+  const [activeTab, setActiveTab] = useState<'Individual' | 'Department' | 'Global'>(isEmployee ? 'Individual' : 'Individual');
   const [viewMode, setViewMode] = useState<'table' | 'tree' | 'chart'>('table');
   const [viewPending, setViewPending] = useState(false);
   const [selectedReviewMember, setSelectedReviewMember] = useState<any>(null);
@@ -93,21 +124,78 @@ const ObjectivesPage: React.FC<ObjectivesPageProps> = ({ role }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
 
+  // Admin Talent Filter State (Individual)
+  const [selectedEmployee, setSelectedEmployee] = useState<string>('All Employees');
+  const [isTalentDropdownOpen, setIsTalentDropdownOpen] = useState(false);
+  const [talentSearch, setTalentSearch] = useState('');
+  const talentDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Admin Dept Filter State (Department)
+  const [selectedDeptFilter, setSelectedDeptFilter] = useState<string>('All Departments');
+  const [isDeptDropdownOpen, setIsDeptDropdownOpen] = useState(false);
+  const [deptSearch, setDeptSearch] = useState('');
+  const deptDropdownRef = useRef<HTMLDivElement>(null);
+
   // Define Objective State
   const [isDefineModalOpen, setIsDefineModalOpen] = useState(false);
   const [defineObjectiveType, setDefineObjectiveType] = useState<'Individual' | 'Department' | 'Global' | null>(null);
   const [isChoiceDropdownOpen, setIsChoiceDropdownOpen] = useState(false);
 
+  // If role is employee, force activeTab to Individual whenever it renders
+  useEffect(() => {
+    if (isEmployee) {
+      setActiveTab('Individual');
+    }
+  }, [isEmployee]);
+
+  // Dropdown click outside logic
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (talentDropdownRef.current && !talentDropdownRef.current.contains(event.target as Node)) {
+        setIsTalentDropdownOpen(false);
+      }
+      if (deptDropdownRef.current && !deptDropdownRef.current.contains(event.target as Node)) {
+        setIsDeptDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const isLeadership = [UserRole.ORG_ADMIN, UserRole.EXECUTIVE, UserRole.MANAGER].includes(role);
   const isHOD = [UserRole.ORG_ADMIN, UserRole.EXECUTIVE, UserRole.MANAGER, UserRole.HR].includes(role);
 
   const filteredGoals = useMemo(() => {
-    return MOCK_OBJECTIVES.filter(o => o.level === activeTab);
-  }, [activeTab]);
+    let goals = MOCK_OBJECTIVES.filter(o => o.level === activeTab);
+    
+    // Individual filtering
+    if (activeTab === 'Individual' && isOrgAdmin && selectedEmployee !== 'All Employees') {
+      goals = goals.filter(g => g.owner === selectedEmployee);
+    }
+    
+    // Department filtering
+    if (activeTab === 'Department' && isOrgAdmin && selectedDeptFilter !== 'All Departments') {
+      goals = goals.filter(g => g.ownerDept === selectedDeptFilter);
+    }
+    
+    return goals;
+  }, [activeTab, selectedEmployee, selectedDeptFilter, isOrgAdmin]);
 
   const paginatedGoals = useMemo(() => {
     return filteredGoals.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
   }, [filteredGoals, currentPage]);
+
+  const filteredTalentList = useMemo(() => {
+    return MOCK_EMPLOYEES_LIST.filter(t => 
+      t.name.toLowerCase().includes(talentSearch.toLowerCase())
+    );
+  }, [talentSearch]);
+
+  const filteredDeptList = useMemo(() => {
+    return MOCK_DEPARTMENTS_LIST.filter(d => 
+      d.name.toLowerCase().includes(deptSearch.toLowerCase())
+    );
+  }, [deptSearch]);
 
   const handleOpenGoalQuickView = (code: string) => {
     const goal = MOCK_OBJECTIVES.find(o => o.code === code);
@@ -124,6 +212,7 @@ const ObjectivesPage: React.FC<ObjectivesPageProps> = ({ role }) => {
   };
 
   const handleDefineClick = () => {
+    // Employees cannot choose scope; they only set individual objectives.
     if (isHOD) {
       setIsChoiceDropdownOpen(!isChoiceDropdownOpen);
     } else {
@@ -226,8 +315,12 @@ const ObjectivesPage: React.FC<ObjectivesPageProps> = ({ role }) => {
     <div className="space-y-6 animate-in fade-in duration-500 pb-12">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight uppercase leading-none mb-1">Strategy & Objectives</h1>
-          <p className="text-slate-500 text-sm">Manage institutional performance via level-based alignment tracking</p>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight uppercase leading-none mb-1">
+            {isEmployee ? 'My Objectives & Alignment' : 'Strategy & Objectives'}
+          </h1>
+          <p className="text-slate-500 text-sm">
+            {isEmployee ? 'Manage your personal performance anchors and strategic alignment' : 'Manage institutional performance via level-based alignment tracking'}
+          </p>
         </div>
         
         <div className="flex items-center space-x-3">
@@ -294,7 +387,7 @@ const ObjectivesPage: React.FC<ObjectivesPageProps> = ({ role }) => {
         </div>
       </div>
 
-      {isLeadership && (
+      {isLeadership && !isEmployee && (
         <div className="bg-indigo-50/80 border border-indigo-100 rounded-3xl p-5 flex flex-col sm:flex-row items-center justify-between shadow-sm backdrop-blur-sm group">
            <div className="flex items-center space-x-4 mb-4 sm:mb-0">
               <div className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200">
@@ -319,16 +412,40 @@ const ObjectivesPage: React.FC<ObjectivesPageProps> = ({ role }) => {
       )}
 
       <div className="flex flex-col lg:flex-row gap-8">
+        {/* Only show Hierarchy Tabs for non-employees */}
         <aside className={`w-full lg:w-72 shrink-0 space-y-6 ${viewMode !== 'table' ? 'hidden lg:block' : ''}`}>
           <div className="bg-white border border-slate-200 rounded-[2.5rem] p-8 shadow-sm space-y-8 sticky top-6">
-             <div className="space-y-6">
-                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Performance Hierarchy</h3>
-                <div className="space-y-1">
-                  <LevelTab label="Individual Goals" active={activeTab === 'Individual'} onClick={() => {setActiveTab('Individual'); setCurrentPage(1);}} icon={<UserPlus size={12}/>} />
-                  <LevelTab label="Departmental Goals" active={activeTab === 'Department'} onClick={() => {setActiveTab('Department'); setCurrentPage(1);}} icon={<Briefcase size={12}/>} />
-                  <LevelTab label="Global Strategy" active={activeTab === 'Global'} onClick={() => {setActiveTab('Global'); setCurrentPage(1);}} icon={<Target size={12}/>} />
-                </div>
-             </div>
+             {!isEmployee ? (
+               <div className="space-y-6">
+                  <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Performance Hierarchy</h3>
+                  <div className="space-y-1">
+                    <LevelTab label="Individual Goals" active={activeTab === 'Individual'} onClick={() => {setActiveTab('Individual'); setCurrentPage(1);}} icon={<UserPlus size={12}/>} />
+                    <LevelTab label="Departmental Goals" active={activeTab === 'Department'} onClick={() => {setActiveTab('Department'); setCurrentPage(1);}} icon={<Briefcase size={12}/>} />
+                    <LevelTab 
+                      label={isOrgAdmin ? "Company Goals" : "Global Strategy"} 
+                      active={activeTab === 'Global'} 
+                      onClick={() => {setActiveTab('Global'); setCurrentPage(1);}} 
+                      icon={<Target size={12}/>} 
+                    />
+                  </div>
+               </div>
+             ) : (
+               <div className="space-y-6">
+                  <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">My Performance Context</h3>
+                  <div className="p-5 bg-slate-50 border border-slate-100 rounded-2xl space-y-4">
+                     <div>
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Average Attainment</p>
+                        <p className="text-xl font-black text-slate-900">68%</p>
+                     </div>
+                     <div className="h-1.5 w-full bg-slate-200 rounded-full overflow-hidden">
+                        <div className="h-full bg-primary w-[68%]" />
+                     </div>
+                     <p className="text-[10px] text-slate-500 italic font-medium leading-relaxed">
+                        Aligned with 4 Departmental success anchors.
+                     </p>
+                  </div>
+               </div>
+             )}
              <div className="p-6 bg-slate-900 rounded-[2.5rem] text-white space-y-4 relative overflow-hidden group">
                 <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity"><ShieldCheck size={48} className="text-primary"/></div>
                 <div className="flex items-center space-x-2 text-primary relative z-10">
@@ -346,9 +463,115 @@ const ObjectivesPage: React.FC<ObjectivesPageProps> = ({ role }) => {
           {viewMode === 'table' && (
             <div className="bg-white border border-slate-200 rounded-[2.5rem] shadow-sm overflow-hidden flex flex-col animate-in fade-in duration-300">
               <div className="px-8 py-6 border-b border-slate-100 bg-slate-50/30 flex items-center justify-between">
-                 <h3 className="font-black text-slate-900 text-sm uppercase tracking-widest">{activeTab} Performance anchors</h3>
-                 <div className="flex items-center space-x-2">
-                    <span className="text-[10px] font-black text-slate-400 uppercase bg-white border border-slate-100 px-3 py-1 rounded-full shadow-sm">{filteredGoals.length} Items Total</span>
+                 <h3 className="font-black text-slate-900 text-sm uppercase tracking-widest">
+                    {isEmployee ? 'My Personalized Performance Anchors' : `${activeTab} Performance anchors`}
+                 </h3>
+                 
+                 {/* SEARCH & SELECT TALENT (Org Admin Only) */}
+                 <div className="flex items-center space-x-4">
+                    {isOrgAdmin && activeTab === 'Individual' ? (
+                       <div className="relative" ref={talentDropdownRef}>
+                          <button 
+                            onClick={() => setIsTalentDropdownOpen(!isTalentDropdownOpen)}
+                            className="flex items-center space-x-3 px-4 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-700 shadow-sm hover:border-primary transition-all group min-w-[220px]"
+                          >
+                             <Users size={14} className="text-slate-400 group-hover:text-primary" />
+                             <span className="flex-1 text-left truncate">{selectedEmployee}</span>
+                             <ChevronDown size={14} className={`text-slate-400 transition-transform ${isTalentDropdownOpen ? 'rotate-180' : ''}`} />
+                          </button>
+
+                          {isTalentDropdownOpen && (
+                             <div className="absolute top-full right-0 mt-2 w-72 bg-white border border-slate-100 shadow-[0_20px_50px_rgba(0,0,0,0.15)] rounded-2xl z-[100] p-2 animate-in zoom-in-95 duration-100">
+                                <div className="relative mb-2">
+                                   <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" />
+                                   <input 
+                                      autoFocus
+                                      value={talentSearch}
+                                      onChange={(e) => setTalentSearch(e.target.value)}
+                                      placeholder="Search institutional talent..."
+                                      className="w-full bg-slate-50 border-none rounded-lg pl-9 pr-3 py-2 text-[10px] font-bold outline-none focus:ring-2 focus:ring-primary/20"
+                                   />
+                                </div>
+                                <div className="max-h-64 overflow-y-auto custom-scrollbar space-y-0.5">
+                                   {filteredTalentList.map(talent => (
+                                      <button 
+                                        key={talent.id}
+                                        onClick={() => {
+                                           setSelectedEmployee(talent.name);
+                                           setIsTalentDropdownOpen(false);
+                                           setTalentSearch('');
+                                           setCurrentPage(1);
+                                        }}
+                                        className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-all text-left group ${selectedEmployee === talent.name ? 'bg-primary text-white' : 'hover:bg-slate-50'}`}
+                                      >
+                                         {talent.avatar ? (
+                                           <img src={talent.avatar} className="w-6 h-6 rounded-full border border-white/20" alt={talent.name} />
+                                         ) : (
+                                           <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[8px] font-black ${selectedEmployee === talent.name ? 'bg-white/20' : 'bg-slate-200 text-slate-500'}`}>ALL</div>
+                                         )}
+                                         <span className="text-[10px] font-black uppercase tracking-tight">{talent.name}</span>
+                                      </button>
+                                   ))}
+                                   {filteredTalentList.length === 0 && (
+                                      <div className="py-8 text-center text-slate-400 text-[10px] font-black uppercase italic">No matches found</div>
+                                   )}
+                                </div>
+                             </div>
+                          )}
+                       </div>
+                    ) : isOrgAdmin && activeTab === 'Department' ? (
+                       <div className="relative" ref={deptDropdownRef}>
+                          <button 
+                            onClick={() => setIsDeptDropdownOpen(!isDeptDropdownOpen)}
+                            className="flex items-center space-x-3 px-4 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-700 shadow-sm hover:border-primary transition-all group min-w-[220px]"
+                          >
+                             <Building2 size={14} className="text-slate-400 group-hover:text-primary" />
+                             <span className="flex-1 text-left truncate">{selectedDeptFilter}</span>
+                             <ChevronDown size={14} className={`text-slate-400 transition-transform ${isDeptDropdownOpen ? 'rotate-180' : ''}`} />
+                          </button>
+
+                          {isDeptDropdownOpen && (
+                             <div className="absolute top-full right-0 mt-2 w-72 bg-white border border-slate-100 shadow-[0_20px_50px_rgba(0,0,0,0.15)] rounded-2xl z-[100] p-2 animate-in zoom-in-95 duration-100">
+                                <div className="relative mb-3">
+                                   <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" />
+                                   <input 
+                                      autoFocus
+                                      value={deptSearch}
+                                      onChange={(e) => setDeptSearch(e.target.value)}
+                                      placeholder="Search departments..."
+                                      className="w-full bg-slate-50 border-none rounded-lg pl-9 pr-4 py-2 text-[10px] font-bold outline-none focus:ring-2 focus:ring-primary/20"
+                                   />
+                                </div>
+                                <div className="max-h-64 overflow-y-auto custom-scrollbar space-y-0.5">
+                                   {filteredDeptList.map(dept => (
+                                      <button 
+                                        key={dept.id}
+                                        onClick={() => {
+                                           setSelectedDeptFilter(dept.name);
+                                           setIsDeptDropdownOpen(false);
+                                           setDeptSearch('');
+                                           setCurrentPage(1);
+                                        }}
+                                        className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-all text-left group ${selectedDeptFilter === dept.name ? 'bg-primary text-white' : 'hover:bg-slate-50'}`}
+                                      >
+                                         <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[8px] font-black ${selectedDeptFilter === dept.name ? 'bg-white/20' : 'bg-slate-200 text-slate-500'}`}>
+                                            {dept.name === 'All Departments' ? 'ALL' : dept.name.charAt(0)}
+                                         </div>
+                                         <span className="text-[10px] font-black uppercase tracking-tight">{dept.name}</span>
+                                      </button>
+                                   ))}
+                                   {filteredDeptList.length === 0 && (
+                                      <div className="py-8 text-center text-slate-400 text-[10px] font-black uppercase italic">No matches found</div>
+                                   )}
+                                </div>
+                             </div>
+                          )}
+                       </div>
+                    ) : (
+                       <span className="text-[10px] font-black text-slate-400 uppercase bg-white border border-slate-100 px-3 py-1 rounded-full shadow-sm">
+                          {filteredGoals.length} Items Total
+                       </span>
+                    )}
                  </div>
               </div>
               
@@ -358,7 +581,8 @@ const ObjectivesPage: React.FC<ObjectivesPageProps> = ({ role }) => {
                     <tr>
                       <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">ID</th>
                       <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Objective</th>
-                      {activeTab === 'Department' && <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Owner Unit</th>}
+                      {activeTab === 'Individual' && isOrgAdmin && selectedEmployee === 'All Employees' && <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Owner</th>}
+                      {activeTab === 'Department' && isOrgAdmin && selectedDeptFilter === 'All Departments' && <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Owner Unit</th>}
                       {activeTab === 'Individual' && <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Mapped Dept Goal</th>}
                       {activeTab === 'Department' && <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Mapped Global Goal</th>}
                       {activeTab === 'Global' && <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Org Strategy</th>}
@@ -368,7 +592,11 @@ const ObjectivesPage: React.FC<ObjectivesPageProps> = ({ role }) => {
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {paginatedGoals.map(obj => (
-                      <tr key={obj.id} className="hover:bg-slate-50/50 group transition-all cursor-pointer">
+                      <tr 
+                        key={obj.id} 
+                        onClick={() => handleOpenGoalQuickView(obj.code)}
+                        className="hover:bg-slate-50/50 group transition-all cursor-pointer"
+                      >
                         <td className="px-8 py-6">
                            <span className="text-[10px] font-black text-slate-400 font-mono tracking-tighter">{obj.code}</span>
                         </td>
@@ -376,7 +604,17 @@ const ObjectivesPage: React.FC<ObjectivesPageProps> = ({ role }) => {
                           <p className="text-sm font-bold text-slate-900 group-hover:text-primary transition-colors uppercase tracking-tight">{obj.title}</p>
                           <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1 block">{obj.type} Framework</span>
                         </td>
-                        {activeTab === 'Department' && (
+                        {activeTab === 'Individual' && isOrgAdmin && selectedEmployee === 'All Employees' && (
+                          <td className="px-8 py-6">
+                            <div className="flex items-center space-x-2">
+                               <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-[8px] font-black text-slate-400 uppercase">
+                                  {obj.owner?.charAt(0)}
+                               </div>
+                               <span className="text-[11px] font-bold text-slate-700">{obj.owner}</span>
+                            </div>
+                          </td>
+                        )}
+                        {activeTab === 'Department' && isOrgAdmin && selectedDeptFilter === 'All Departments' && (
                           <td className="px-8 py-6">
                             <div className="flex items-center space-x-2 text-xs font-bold text-slate-600">
                                <Building2 size={12} className="text-slate-300" />
@@ -450,6 +688,159 @@ const ObjectivesPage: React.FC<ObjectivesPageProps> = ({ role }) => {
     </div>
   );
 };
+
+/**
+ * Enhanced Goal Quick View Modal Component
+ */
+const GoalQuickViewModal = ({ goal, onClose }: { goal: any, onClose: () => void }) => {
+  // Generate dummy vectors for the comprehensive view
+  const successVectors = [
+    { title: "Optimize Throughput v4", progress: goal.progress, weight: 60, status: "Healthy" },
+    { title: "Unit Maintenance SLOs", progress: Math.min(100, goal.progress + 5), weight: 40, status: "Active" }
+  ];
+
+  return (
+    <div className="fixed inset-0 z-[500] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+       <div className="bg-white rounded-[3rem] w-full max-w-4xl shadow-2xl overflow-hidden border border-slate-200 border-t-[10px] border-t-primary flex flex-col max-h-[90vh]">
+          {/* Header Section */}
+          <div className="p-10 border-b border-slate-100 flex items-start justify-between bg-slate-50/50">
+             <div className="flex items-center space-x-6">
+                <div className="w-16 h-16 bg-primary text-white rounded-2xl flex items-center justify-center shadow-xl shadow-primary/20">
+                   <Target size={32} />
+                </div>
+                <div>
+                   <div className="flex items-center space-x-3 mb-2">
+                      <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">{goal.code} • Institutional Node</span>
+                      <StatusBadge status={goal.status} mini />
+                   </div>
+                   <h3 className="text-3xl font-black text-slate-900 tracking-tight uppercase leading-none">{goal.title}</h3>
+                </div>
+             </div>
+             <button onClick={onClose} className="p-3 text-slate-300 hover:text-slate-600 transition-colors bg-white rounded-2xl shadow-sm border border-slate-100"><X size={24}/></button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto custom-scrollbar p-10 space-y-10">
+             {/* Key Metrics Analytics Row */}
+             <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+                <AnalyticMetric label="Horizon Progress" value={`${goal.progress}%`} icon={<Activity size={18} className="text-primary" />} />
+                <AnalyticMetric label="Confidence" value={`${goal.confidence || 85}%`} icon={<BrainCircuit size={18} className="text-indigo-600" />} />
+                <AnalyticMetric label="Inst. Weight" value={`${goal.weight || 20}%`} icon={<Scale size={18} className="text-slate-600" />} />
+                <AnalyticMetric label="Unit Health" value="OPTIMAL" icon={<ShieldCheck size={18} className="text-green-600" />} />
+             </div>
+
+             <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+                {/* Success Vectors Column */}
+                <div className="lg:col-span-8 space-y-6">
+                   <div className="flex items-center justify-between px-1">
+                      <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-widest border-l-4 border-primary pl-4">Child Performance Vectors</h4>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase">{successVectors.length} Key Results</span>
+                   </div>
+                   <div className="space-y-4">
+                      {successVectors.map((v, i) => (
+                         <div key={i} className="p-6 bg-slate-50 border border-slate-100 rounded-[2rem] flex items-center justify-between group hover:bg-white hover:shadow-xl transition-all">
+                            <div className="flex items-center space-x-5">
+                               <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-slate-300 group-hover:text-primary shadow-sm transition-colors">
+                                  <GitBranch size={20}/>
+                               </div>
+                               <div>
+                                  <h5 className="text-sm font-black text-slate-800 uppercase tracking-tight">{v.title}</h5>
+                                  <p className="text-[9px] text-slate-400 font-bold uppercase mt-1">Weight: {v.weight}% • Status: {v.status}</p>
+                               </div>
+                            </div>
+                            <div className="flex items-center space-x-6">
+                               <div className="text-right">
+                                  <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Attainment</p>
+                                  <span className="text-sm font-black text-slate-900">{v.progress}%</span>
+                               </div>
+                               <div className="h-10 w-[2px] bg-slate-200" />
+                               <div className="p-2 bg-white rounded-lg text-slate-200 group-hover:text-primary transition-colors">
+                                  <ChevronRight size={18}/>
+                               </div>
+                            </div>
+                         </div>
+                      ))}
+                   </div>
+
+                   {/* Strategic Context Panel */}
+                   <div className="p-8 bg-slate-900 rounded-[2.5rem] text-white relative overflow-hidden group">
+                      <div className="absolute top-0 right-0 p-6 opacity-5"><BrainCircuit size={120} className="text-primary" /></div>
+                      <div className="relative z-10">
+                         <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-4 flex items-center">
+                            <Sparkles size={14} className="mr-2" /> Alignment Intelligence
+                         </h4>
+                         <p className="text-base font-medium text-slate-300 leading-relaxed italic">
+                            "Performance anchor <span className="text-white font-bold">{goal.code}</span> demonstrates high tactical fidelity with the {goal.parentCode || 'Global'} Horizon. Cross-unit velocity indicates a stable delivery window."
+                         </p>
+                      </div>
+                   </div>
+                </div>
+
+                {/* Ownership & Hierarchy Column */}
+                <div className="lg:col-span-4 space-y-8">
+                   <div className="space-y-4">
+                      <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Node Ownership</h4>
+                      <div className="p-6 border border-slate-100 rounded-[2rem] bg-white shadow-sm flex items-center space-x-4">
+                         <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400">
+                            <User size={24}/>
+                         </div>
+                         <div>
+                            <p className="text-sm font-black text-slate-900 uppercase tracking-tight">{goal.owner || "Strategic Unit"}</p>
+                            <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">Custodian of Execution</p>
+                         </div>
+                      </div>
+                   </div>
+
+                   <div className="space-y-4">
+                      <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Cascade Strategy</h4>
+                      <div className="p-6 border border-slate-100 rounded-[2rem] bg-white shadow-sm space-y-6">
+                         <div>
+                            <p className="text-[9px] font-black text-slate-400 uppercase mb-2 tracking-widest">Parent Anchor</p>
+                            <div className="flex items-center space-x-2 text-xs font-bold text-primary italic">
+                               <LinkIcon size={12}/>
+                               <span>{goal.parentCode || "Global Strategy"}</span>
+                            </div>
+                         </div>
+                         <div className="pt-6 border-t border-slate-50">
+                            <p className="text-[9px] font-black text-slate-400 uppercase mb-2 tracking-widest">Alignment Path</p>
+                            <div className="flex flex-col space-y-1">
+                               <span className="text-[10px] font-bold text-slate-700">Institutional Strategy Hub</span>
+                               <ChevronDown size={10} className="text-slate-300 ml-2" />
+                               <span className="text-[10px] font-bold text-primary uppercase">{goal.title}</span>
+                            </div>
+                         </div>
+                      </div>
+                   </div>
+
+                   <div className="p-6 bg-indigo-50 border border-indigo-100 rounded-[2rem] flex items-center justify-between group">
+                      <div>
+                         <p className="text-[9px] font-black text-indigo-600 uppercase tracking-widest">Audit Status</p>
+                         <p className="text-xs font-bold text-indigo-900 mt-1 uppercase">Policy Verified</p>
+                      </div>
+                      <ShieldCheck size={24} className="text-indigo-400 group-hover:text-indigo-600 transition-colors" />
+                   </div>
+                </div>
+             </div>
+          </div>
+
+          {/* Footer Actions */}
+          <div className="p-10 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+             <button className="px-8 py-3 text-xs font-black text-slate-400 hover:text-slate-800 transition-colors uppercase tracking-widest">Download Full Brief</button>
+             <button onClick={onClose} className="px-12 py-4 bg-slate-900 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl hover:bg-black transition-all">Return to Registry</button>
+          </div>
+       </div>
+    </div>
+  );
+};
+
+const AnalyticMetric = ({ label, value, icon }: any) => (
+  <div className="p-5 bg-white border border-slate-100 rounded-3xl shadow-sm space-y-3">
+     <div className="flex items-center justify-between">
+        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{label}</span>
+        {icon}
+     </div>
+     <p className="text-2xl font-black text-slate-900 tracking-tight leading-none">{value}</p>
+  </div>
+);
 
 /**
  * Define Objective Wizard Component
@@ -597,7 +988,7 @@ const DefineObjectiveWizard = ({ type, onClose }: { type: 'Individual' | 'Depart
 
                       {type !== 'Global' && (
                         <div className="space-y-3 relative" ref={dropdownRef}>
-                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Vertical Alignment (Compulsory)</label>
+                           <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest px-1">Vertical Alignment (Compulsory)</label>
                            <div 
                               onClick={() => setIsParentDropdownOpen(!isParentDropdownOpen)}
                               className={`w-full p-5 border-2 rounded-2xl flex items-center justify-between cursor-pointer transition-all ${isParentDropdownOpen ? 'border-primary bg-white shadow-lg ring-4 ring-primary/5' : 'bg-slate-50 border-slate-100 hover:border-slate-300'}`}
@@ -1092,58 +1483,6 @@ const ReviewMemberDetail = ({ member, onApprove }: { member: any, onApprove: () 
                    <Activity size={24} />
                 </div>
              </div>
-          </div>
-       </div>
-    </div>
-  );
-};
-
-const GoalQuickViewModal = ({ goal, onClose }: { goal: any, onClose: () => void }) => {
-  return (
-    <div className="fixed inset-0 z-[500] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-       <div className="bg-white rounded-[3rem] w-full max-w-xl shadow-2xl overflow-hidden border border-slate-200 border-t-[10px] border-t-primary">
-          <div className="p-10 space-y-8">
-             <div className="flex justify-between items-start">
-                <div>
-                   <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-3 block">{goal.code} • Framework Node</span>
-                   <h3 className="text-2xl font-black text-slate-900 tracking-tight leading-tight uppercase">{goal.title}</h3>
-                </div>
-                <button onClick={onClose} className="p-3 text-slate-300 hover:text-slate-600 transition-colors bg-slate-50 rounded-2xl shadow-sm"><X size={24}/></button>
-             </div>
-             
-             <div className="grid grid-cols-2 gap-6">
-                <div className="p-6 bg-slate-50 rounded-3xl border border-slate-100 shadow-inner">
-                   <p className="text-[9px] font-black text-slate-400 uppercase mb-2 tracking-widest">Hierarchy Tier</p>
-                   <p className="text-base font-black text-slate-800 uppercase">{goal.level}</p>
-                </div>
-                <div className="p-6 bg-slate-50 rounded-3xl border border-slate-100 shadow-inner">
-                   <p className="text-[9px] font-black text-slate-400 uppercase mb-2 tracking-widest">At-Value Attainment</p>
-                   <p className="text-base font-black text-slate-800">{goal.progress}%</p>
-                </div>
-             </div>
-
-             <div className="space-y-4">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Governance Registry</p>
-                <div className="p-6 border border-slate-100 rounded-[2rem] space-y-4 shadow-sm bg-white">
-                   <div className="flex justify-between items-center text-xs">
-                      <span className="text-slate-500 font-bold uppercase tracking-tight">Institutional Logic</span>
-                      <span className="font-black text-slate-900">{goal.type}</span>
-                   </div>
-                   <div className="flex justify-between items-center text-xs">
-                      <span className="text-slate-500 font-bold uppercase tracking-tight">Audit Status</span>
-                      <StatusBadge status={goal.status} mini />
-                   </div>
-                   {goal.mappedTo && (
-                      <div className="flex justify-between items-center text-xs border-t border-slate-50 pt-4">
-                         <span className="text-slate-500 font-bold uppercase tracking-tight">Cascade Anchor</span>
-                         <span className="font-black text-primary italic text-right max-w-[220px] truncate">{goal.mappedTo}</span>
-                      </div>
-                   )}
-                </div>
-             </div>
-          </div>
-          <div className="p-10 bg-slate-50 border-t border-slate-100 flex justify-end">
-             <button onClick={onClose} className="px-10 py-4 bg-slate-900 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl hover:bg-black transition-all">Return to Registry</button>
           </div>
        </div>
     </div>

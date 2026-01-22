@@ -67,7 +67,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeRole }) => {
       name: 'Reports', 
       icon: FileText, 
       path: '/reports',
-      roles: [UserRole.ORG_ADMIN, UserRole.EXECUTIVE, UserRole.HR, UserRole.MANAGER, UserRole.EMPLOYEE]
+      roles: [UserRole.ORG_ADMIN, UserRole.EXECUTIVE, UserRole.HR, UserRole.MANAGER]
     },
     { 
       name: 'Audit Log', 
@@ -79,7 +79,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeRole }) => {
       name: 'Settings', 
       icon: Settings, 
       path: '/settings', 
-      roles: [UserRole.ORG_ADMIN] 
+      roles: [UserRole.ORG_ADMIN, UserRole.EMPLOYEE] 
     },
   ];
 

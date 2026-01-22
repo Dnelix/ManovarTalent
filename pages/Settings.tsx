@@ -29,9 +29,14 @@ import {
   Zap,
   MoreVertical,
   CheckCircle2,
-  // Fix: Import missing Download icon
-  Download
+  Download,
+  KeyRound,
+  ShieldAlert,
+  Smartphone,
+  EyeOff,
+  UserCircle
 } from 'lucide-react';
+import { UserRole } from '../types';
 
 const MOCK_SYSTEM_AUDIT = [
   { id: 'l1', user: 'Alex Rivera', role: 'Org Admin', event: 'Modified RBAC', target: 'Manager Roles', time: 'Oct 15, 14:22', category: 'Security', severity: 'Medium' },
@@ -41,9 +46,157 @@ const MOCK_SYSTEM_AUDIT = [
   { id: 'l5', user: 'System Auth', role: 'Security', event: 'New Key Generated', target: 'API_GATEWAY', time: 'Oct 13, 23:10', category: 'Security', severity: 'High' },
 ];
 
-const SettingsPage: React.FC = () => {
+interface SettingsPageProps {
+  role?: UserRole;
+}
+
+const SettingsPage: React.FC<SettingsPageProps> = ({ role = UserRole.ORG_ADMIN }) => {
   const [activeSubTab, setActiveSubTab] = useState<'security' | 'comm' | 'branding' | 'logs'>('security');
   const [editingRole, setEditingRole] = useState<string | null>(null);
+
+  // Employee-specific state
+  const [showPassword, setShowPassword] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
+  const isEmployee = role === UserRole.EMPLOYEE;
+
+  const handlePersonalSave = () => {
+    setSaveSuccess(true);
+    setTimeout(() => setSaveSuccess(false), 3000);
+  };
+
+  if (isEmployee) {
+    return (
+      <div className="space-y-8 animate-in fade-in duration-500 pb-20">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900 tracking-tight uppercase">My Account Settings</h1>
+            <p className="text-slate-500 text-sm mt-1">Manage your security, profile visibility, and system preferences</p>
+          </div>
+          {saveSuccess && (
+            <div className="bg-green-50 border border-green-100 text-green-700 px-4 py-2 rounded-xl text-xs font-bold flex items-center space-x-2 animate-in slide-in-from-top-2">
+              <CheckCircle2 size={14} />
+              <span>Settings Synchronized</span>
+            </div>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <div className="lg:col-span-8 space-y-8">
+            {/* Password Reset Section */}
+            <div className="bg-white border border-slate-200 rounded-[2.5rem] p-8 shadow-sm space-y-10">
+              <div className="flex items-start justify-between">
+                <SectionHeader title="Authentication Security" desc="Update your password and manage two-factor authentication." />
+                <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl">
+                  <KeyRound size={24} />
+                </div>
+              </div>
+
+              <div className="space-y-6 max-w-md">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Current Password</label>
+                  <div className="relative">
+                    <input 
+                      type={showPassword ? "text" : "password"} 
+                      placeholder="••••••••••••"
+                      className="w-full bg-slate-50 border-2 border-slate-50 rounded-2xl px-6 py-4 text-sm font-bold outline-none focus:bg-white focus:border-indigo-600 transition-all shadow-inner" 
+                    />
+                    <button 
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-600 transition-colors"
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">New Institutional Password</label>
+                  <input 
+                    type="password" 
+                    className="w-full bg-slate-50 border-2 border-slate-50 rounded-2xl px-6 py-4 text-sm font-bold outline-none focus:bg-white focus:border-indigo-600 transition-all shadow-inner" 
+                  />
+                </div>
+                <button 
+                  onClick={handlePersonalSave}
+                  className="px-8 py-3 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-xl shadow-indigo-100 hover:scale-[1.02] active:scale-95 transition-all"
+                >
+                  Confirm Password Reset
+                </button>
+              </div>
+
+              <div className="pt-8 border-t border-slate-50 flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center text-slate-500">
+                    <Smartphone size={20} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-slate-900">Multi-Factor Auth (MFA)</p>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase">Status: Enabled (Authy/Google Auth)</p>
+                  </div>
+                </div>
+                <button className="text-xs font-bold text-indigo-600 hover:underline">Manage MFA Nodes</button>
+              </div>
+            </div>
+
+            {/* Notification Preferences */}
+            <div className="bg-white border border-slate-200 rounded-[2.5rem] p-8 shadow-sm space-y-10">
+              <SectionHeader title="Notification Ecosystem" desc="Configure how and when you receive performance cycle alerts." />
+              <div className="space-y-2">
+                <TriggerRow label="Appraisal Milestone Alerts" trigger="Real-time" channel="Email + Push" active />
+                <TriggerRow label="Calibration Finalized" trigger="Cycle Close" channel="Slack + In-App" active />
+                <TriggerRow label="Strategic Pivot Reports" trigger="Weekly" channel="Email" />
+                <TriggerRow label="AIAssistant Insights" trigger="Real-time" channel="In-App Only" active />
+              </div>
+            </div>
+          </div>
+
+          <div className="lg:col-span-4 space-y-6">
+            <div className="bg-slate-900 rounded-[2.5rem] p-8 text-white relative overflow-hidden group shadow-xl">
+              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                <UserCircle size={100} className="text-primary" />
+              </div>
+              <h3 className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-8 border-l-2 border-primary pl-4">Personal Identity</h3>
+              <div className="space-y-6 relative z-10">
+                 <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center text-white border border-white/10 shadow-inner">
+                       <Fingerprint size={24} />
+                    </div>
+                    <div>
+                       <p className="text-sm font-black uppercase">Institutional ID</p>
+                       <p className="text-[10px] text-slate-400 font-bold">USR-742-MANOVAR</p>
+                    </div>
+                 </div>
+                 <div className="pt-6 border-t border-white/5">
+                    <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2">Role Tier</p>
+                    <div className="flex items-center space-x-2 text-green-400">
+                       <ShieldCheck size={16} />
+                       <span className="text-sm font-bold uppercase tracking-tight">Verified Employee (L6)</span>
+                    </div>
+                 </div>
+              </div>
+            </div>
+
+            <div className="bg-white border border-slate-200 rounded-[2.5rem] p-8 shadow-sm">
+               <div className="flex items-center space-x-3 mb-6">
+                  <History size={18} className="text-slate-400" />
+                  <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">My Recent Actions</h3>
+               </div>
+               <div className="space-y-4">
+                  <div className="flex items-start space-x-3">
+                     <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5" />
+                     <p className="text-[11px] font-bold text-slate-700">Modified Notification Channel <span className="block text-[9px] text-slate-400 mt-1 uppercase">2h ago</span></p>
+                  </div>
+                  <div className="flex items-start space-x-3 opacity-60">
+                     <div className="w-1.5 h-1.5 rounded-full bg-slate-300 mt-1.5" />
+                     <p className="text-[11px] font-bold text-slate-700">Appraisal Q3 Finalized <span className="block text-[9px] text-slate-400 mt-1 uppercase">Yesterday</span></p>
+                  </div>
+               </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-12">
@@ -54,7 +207,6 @@ const SettingsPage: React.FC = () => {
         </div>
         <div className="flex items-center space-x-2">
            <button className="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-50 transition-all flex items-center space-x-2">
-              {/* Fix: Use imported Download icon */}
               <Download size={14} />
               <span>Export Config</span>
            </button>

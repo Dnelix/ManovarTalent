@@ -1,3 +1,4 @@
+
 // Removed redundant and malformed UserRole definition and incorrect import
 import React, { useState } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
@@ -57,7 +58,7 @@ const App: React.FC = () => {
           <Route path="/integrations" element={<IntegrationsPage role={activeRole} />} />
           <Route path="/reports" element={<ReportsPage role={activeRole} />} />
           <Route path="/audit-log" element={<AuditLogPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/settings" element={<SettingsPage role={activeRole} />} />
           <Route path="/initiate-pip/:id" element={<InitiatePIPPage />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
