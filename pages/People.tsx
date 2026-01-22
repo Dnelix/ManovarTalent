@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { 
   Users, 
@@ -48,7 +49,11 @@ import {
   Award as Medal,
   Activity,
   CheckCircle2,
-  ListTodo
+  ListTodo,
+  Timer,
+  // Added Download and User to fix "Cannot find name" errors.
+  Download,
+  User
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Pagination from '../components/common/Pagination';
@@ -98,6 +103,27 @@ const MOCK_PEOPLE = [
     tenure: "1.2 Years",
     strengths: ["Reliability Engineering", "Security First"],
     currentFocus: "Cloud Cost Optimization",
+    pipOngoing: true,
+    pipData: {
+      progress: 68,
+      startDate: "Oct 01, 2024",
+      endDate: "Dec 30, 2024",
+      gaps: "Significant latency in PR reviews and consistent failure to meet Cloud Cost KPI targets for Infrastructure Unit.",
+      goals: [
+        { id: 'g1', title: "Reduce average PR cycle time to < 24h", status: "On Track", progress: 75 },
+        { id: 'g2', title: "Implement automated cost-tagging across production", status: "Delayed", progress: 40 },
+        { id: 'g3', title: "Maintain zero-downtime during system upgrades", status: "Exceeded", progress: 100 }
+      ],
+      actions: [
+        { id: 'a1', task: "Daily review of Infrastructure backlog", status: "Completed" },
+        { id: 'a2', task: "Weekly sync with Architecture board", status: "Active" },
+        { id: 'a3', task: "Documentation of FinOps spend strategy", status: "Pending" }
+      ],
+      resources: [
+        { id: 'r1', item: "Senior Mentor Pairing (Jordan Smith)", type: "Mentorship" },
+        { id: 'r2', item: "AWS FinOps Certification Course", type: "Formal Training" }
+      ]
+    },
     pastReviews: [
       { period: "Q2 2024", score: "3.2/5", status: "Meets Expectations", summary: "Maintenance tasks handled, but strategic projects delayed.", krAttainment: 65, kpiVelocity: 74 }
     ],
@@ -151,10 +177,12 @@ const PeoplePage: React.FC<PeoplePageProps> = ({ role = UserRole.ORG_ADMIN }) =>
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [profileTab, setProfileTab] = useState<'info' | 'history' | 'idp'>('info');
   const [isPipActionOpen, setIsPipActionOpen] = useState(false);
+  const [viewingPipProgress, setViewingPipProgress] = useState(false);
   const navigate = useNavigate();
   
   const itemsPerPage = 10;
   const currentItems = MOCK_PEOPLE.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const isManagerView = role === UserRole.MANAGER;
   const canManage = [UserRole.ORG_ADMIN, UserRole.HR, UserRole.MANAGER].includes(role);
 
   const handleOpenPipWizard = () => {
@@ -162,11 +190,24 @@ const PeoplePage: React.FC<PeoplePageProps> = ({ role = UserRole.ORG_ADMIN }) =>
     navigate(`/initiate-pip/${selectedPerson.id}`);
   };
 
+  const handleOpenPipProgress = () => {
+    setViewingPipProgress(true);
+  };
+
+  if (viewingPipProgress && selectedPerson) {
+    return (
+      <PipProgressDashboard 
+        person={selectedPerson} 
+        onBack={() => setViewingPipProgress(false)} 
+      />
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">People & Structure</h1>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight uppercase leading-none">People & Structure</h1>
           <p className="text-slate-500 text-sm mt-1">Manage organizational hierarchy, roles, and skills governance</p>
         </div>
         <div className="flex items-center space-x-3">
@@ -338,7 +379,7 @@ const PeoplePage: React.FC<PeoplePageProps> = ({ role = UserRole.ORG_ADMIN }) =>
                           </div>
                         </div>
 
-                        {selectedPerson.health < 50 && (
+                        {selectedPerson.health < 50 && !selectedPerson.pipOngoing && (
                           <div className="p-6 bg-red-50 border-2 border-red-100 rounded-[2rem] flex items-start space-x-5 shadow-sm">
                              <div className="p-3 bg-white rounded-2xl text-red-600 border border-red-50 shrink-0 shadow-sm">
                                 <PipIcon size={24} />
@@ -427,8 +468,39 @@ const PeoplePage: React.FC<PeoplePageProps> = ({ role = UserRole.ORG_ADMIN }) =>
                     {/* Growth & IDP Tab */}
                     {profileTab === 'idp' && (
                       <div className="space-y-8 animate-in fade-in duration-300 pb-8">
+                         {/* MANAGER VIEW: Ongoing PIP Progress Access */}
+                         {isManagerView && selectedPerson.pipOngoing && (
+                            <div className="p-6 bg-indigo-50 border-2 border-indigo-100 rounded-[2rem] shadow-sm flex items-center justify-between group hover:border-indigo-600/30 transition-all">
+                               <div className="flex items-center space-x-5">
+                                  <div className="w-14 h-14 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-xl shadow-indigo-100">
+                                     <PipIcon size={28} />
+                                  </div>
+                                  <div>
+                                     <p className="text-[10px] font-black text-indigo-700 uppercase tracking-[0.2em] leading-none mb-2">Institutional Protocol</p>
+                                     <h4 className="text-xl font-black text-slate-900 uppercase tracking-tight">Ongoing PIP Active</h4>
+                                     <div className="flex items-center space-x-3 mt-2">
+                                        <div className="h-1 w-24 bg-slate-200 rounded-full overflow-hidden shadow-inner">
+                                           <div className="h-full bg-indigo-600" style={{ width: `${selectedPerson.pipData.progress}%` }} />
+                                        </div>
+                                        <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">{selectedPerson.pipData.progress}% Milestone</span>
+                                     </div>
+                                  </div>
+                               </div>
+                               <button 
+                                onClick={handleOpenPipProgress}
+                                className="px-6 py-3 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all flex items-center space-x-2"
+                               >
+                                  <span>View PIP Progress</span>
+                                  <ArrowRight size={14} />
+                               </button>
+                            </div>
+                         )}
+
                          <div className="space-y-4">
-                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Institutional Learning Progress</h4>
+                            <div className="flex items-center justify-between px-1">
+                               <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Institutional Learning Progress</h4>
+                               <button className="text-[10px] font-bold text-primary hover:underline uppercase tracking-widest">Assign Growth Pillar</button>
+                            </div>
                             <div className="space-y-3">
                                {(selectedPerson.idp?.goals || []).map((goal: any) => (
                                  <div key={goal.id} className="p-5 border border-slate-100 rounded-3xl bg-white hover:shadow-md transition-all group">
@@ -484,16 +556,6 @@ const PeoplePage: React.FC<PeoplePageProps> = ({ role = UserRole.ORG_ADMIN }) =>
                                ))}
                             </div>
                          </div>
-
-                         <div className="p-6 bg-slate-900 rounded-[2.5rem] text-white relative overflow-hidden group shadow-xl">
-                            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity"><BrainCircuit size={80} className="text-primary" /></div>
-                            <div className="relative z-10">
-                               <h5 className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-4 border-l-2 border-primary pl-4">Growth Intelligence</h5>
-                               <p className="text-xs text-slate-300 font-medium italic leading-relaxed">
-                                  "Based on technical velocity in Q2, {selectedPerson.name.split(' ')[0]} shows high aptitude for System Architecture. Suggest enrolling in AWS Solutions Architect path."
-                                </p>
-                            </div>
-                         </div>
                       </div>
                     )}
                   </div>
@@ -506,10 +568,254 @@ const PeoplePage: React.FC<PeoplePageProps> = ({ role = UserRole.ORG_ADMIN }) =>
   );
 };
 
+/**
+ * PIP PROGRESS DASHBOARD - COMPREHENSIVE VIEW
+ * Opens when a manager views an ongoing PIP
+ */
+const PipProgressDashboard = ({ person, onBack }: { person: any, onBack: () => void }) => {
+  const pip = person.pipData;
+
+  return (
+    <div className="space-y-8 animate-in slide-in-from-right duration-500 pb-20">
+       {/* Header & Meta */}
+       <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-6">
+             <button 
+               onClick={onBack}
+               className="p-3 bg-white border border-slate-200 rounded-2xl hover:bg-slate-50 transition-all text-slate-500 shadow-sm"
+             >
+                <ArrowLeft size={20} />
+             </button>
+             <div>
+                <div className="flex items-center space-x-3 mb-1">
+                   <h1 className="text-3xl font-black text-slate-900 tracking-tight uppercase leading-none">Performance Improvement tracking</h1>
+                   <span className="px-3 py-1 bg-indigo-600 text-white rounded-lg text-[9px] font-black uppercase tracking-widest shadow-sm">Ongoing Cycle</span>
+                </div>
+                <p className="text-slate-500 text-sm font-medium">Monitoring remediation progress for {person.name} ({person.level})</p>
+             </div>
+          </div>
+          <div className="flex items-center space-x-3">
+             <button className="flex items-center space-x-2 px-5 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-sm hover:bg-slate-50 transition-all">
+                <Download size={14} />
+                <span>Export Progress Report</span>
+             </button>
+             <button className="px-8 py-2.5 bg-primary text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.02] transition-all">
+                Update Milestones
+             </button>
+          </div>
+       </div>
+
+       {/* Overall Progress Hub */}
+       <div className="bg-white border border-slate-200 rounded-[3rem] p-10 shadow-sm flex flex-col md:flex-row items-center justify-between gap-12 relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-10 opacity-5">
+             <Target size={180} className="text-indigo-600" />
+          </div>
+          <div className="flex items-center space-x-10 relative z-10">
+             <div className="w-32 h-32 rounded-full border-[10px] border-slate-50 flex flex-col items-center justify-center relative bg-white shadow-2xl">
+                <svg className="absolute inset-0 w-full h-full -rotate-90">
+                   <circle cx="50%" cy="50%" r="58" fill="transparent" stroke="#F1F5F9" strokeWidth="10" />
+                   <circle cx="50%" cy="50%" r="58" fill="transparent" stroke="#4F46E5" strokeWidth="10" strokeDasharray={`${(pip.progress / 100) * 364} 364`} strokeLinecap="round" />
+                </svg>
+                <span className="text-3xl font-black text-slate-900">{pip.progress}%</span>
+                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Attainment</span>
+             </div>
+             <div>
+                <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight leading-none mb-3">Overall Plan Attainment</h3>
+                <div className="flex items-center space-x-8">
+                   <div className="space-y-1">
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Active Horizon</p>
+                      <p className="text-sm font-bold text-slate-700">{pip.startDate} — {pip.endDate}</p>
+                   </div>
+                   <div className="w-[1px] h-10 bg-slate-100" />
+                   <div className="space-y-1">
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Next Calibration</p>
+                      <div className="flex items-center space-x-2 text-indigo-600">
+                         <Timer size={14} />
+                         <span className="text-sm font-bold">12 Days Remaining</span>
+                      </div>
+                   </div>
+                </div>
+             </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4 relative z-10 min-w-[320px]">
+             <div className="p-5 bg-slate-50 border border-slate-100 rounded-3xl text-center">
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Goals Hit</p>
+                <p className="text-2xl font-black text-slate-900">2 / 3</p>
+             </div>
+             <div className="p-5 bg-slate-50 border border-slate-100 rounded-3xl text-center">
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Actions Logged</p>
+                <p className="text-2xl font-black text-slate-900">8 / 12</p>
+             </div>
+          </div>
+       </div>
+
+       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          {/* Main Context Panels */}
+          <div className="lg:col-span-8 space-y-8">
+             {/* Section 1: Identified Gaps (Initiation Content) */}
+             <div className="bg-white border border-slate-200 rounded-[2.5rem] p-10 shadow-sm space-y-8">
+                <div className="flex items-center space-x-3 mb-2">
+                   <div className="p-2 bg-red-50 text-red-600 rounded-xl">
+                      <AlertTriangle size={20} />
+                   </div>
+                   <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">Institutional Remediation Focus</h3>
+                </div>
+                <div className="p-8 bg-slate-50 border border-slate-100 rounded-[2rem] shadow-inner relative overflow-hidden group">
+                   <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity">
+                      <FileSearch size={100} className="text-red-600" />
+                   </div>
+                   <p className="text-base font-medium text-slate-600 leading-relaxed italic relative z-10">
+                      "{pip.gaps}"
+                   </p>
+                </div>
+                <div className="flex items-center space-x-4 pt-2">
+                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center">
+                      <ShieldCheck size={12} className="mr-1.5 text-green-500" /> Policy Verified Initiation
+                   </span>
+                </div>
+             </div>
+
+             {/* Section 2: SMART Goal Attainment Tracking */}
+             <div className="bg-white border border-slate-200 rounded-[2.5rem] p-10 shadow-sm space-y-10">
+                <div className="flex items-center justify-between">
+                   <div>
+                      <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">SMART Goal Attainment</h3>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Real-time vector progress tracking</p>
+                   </div>
+                   <span className="px-3 py-1 bg-slate-50 text-slate-400 rounded-lg text-[8px] font-black uppercase tracking-widest border border-slate-100">3 Strategic Anchors</span>
+                </div>
+
+                <div className="space-y-4">
+                   {pip.goals.map((goal: any) => (
+                     <div key={goal.id} className="p-6 bg-slate-50/50 border border-slate-100 rounded-3xl group hover:bg-white hover:shadow-xl transition-all duration-500">
+                        <div className="flex items-center justify-between mb-6">
+                           <div className="flex items-center space-x-5">
+                              <div className={`p-3 rounded-2xl shadow-sm ${goal.status === 'On Track' ? 'bg-indigo-50 text-indigo-600' : goal.status === 'Exceeded' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
+                                 <Target size={20} />
+                              </div>
+                              <div>
+                                 <h4 className="text-sm font-black text-slate-800 uppercase tracking-tight group-hover:text-primary transition-colors">{goal.title}</h4>
+                                 <p className="text-[9px] text-slate-400 font-bold uppercase mt-1">Status: <span className={goal.status === 'On Track' ? 'text-indigo-600' : goal.status === 'Exceeded' ? 'text-green-600' : 'text-red-600'}>{goal.status}</span></p>
+                              </div>
+                           </div>
+                           <div className="text-right">
+                              <span className="text-2xl font-black text-slate-900">{goal.progress}%</span>
+                              <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Achieved</p>
+                           </div>
+                        </div>
+                        <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden shadow-inner">
+                           <div className={`h-full transition-all duration-1000 ${goal.progress === 100 ? 'bg-green-500' : 'bg-indigo-600'}`} style={{ width: `${goal.progress}%` }} />
+                        </div>
+                     </div>
+                   ))}
+                </div>
+             </div>
+
+             {/* Section 3: Required Action Item Ledger */}
+             <div className="bg-white border border-slate-200 rounded-[2.5rem] p-10 shadow-sm space-y-10">
+                <div className="flex items-center justify-between">
+                   <div>
+                      <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">Required Action Compliance</h3>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Daily activities log and verification</p>
+                   </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                   {pip.actions.map((action: any) => (
+                     <div key={action.id} className="p-5 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-between group hover:bg-white hover:border-indigo-600/20 transition-all">
+                        <div className="flex items-center space-x-4">
+                           <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-sm ${action.status === 'Completed' ? 'bg-green-100 text-green-600' : 'bg-white text-slate-400 border border-slate-100'}`}>
+                              {action.status === 'Completed' ? <CheckCircle2 size={20} /> : <Clock size={20} />}
+                           </div>
+                           <span className="text-xs font-bold text-slate-700 uppercase tracking-tight leading-tight">{action.task}</span>
+                        </div>
+                        <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase ${action.status === 'Completed' ? 'bg-green-50 text-green-600' : 'bg-slate-200 text-slate-500'}`}>{action.status}</span>
+                     </div>
+                   ))}
+                </div>
+             </div>
+          </div>
+
+          {/* Sidebar Analytics & Support */}
+          <div className="lg:col-span-4 space-y-8">
+             {/* AI PIP Analysis */}
+             <div className="bg-slate-900 rounded-[3rem] p-10 text-white relative overflow-hidden group shadow-2xl border border-slate-800">
+                <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+                   <BrainCircuit size={120} className="text-primary" />
+                </div>
+                <div className="relative z-10">
+                   <div className="flex items-center space-x-4 mb-8">
+                      <div className="w-12 h-12 bg-primary/20 text-primary border border-primary/20 rounded-2xl flex items-center justify-center shadow-lg border border-primary/20 animate-pulse">
+                         <Sparkles size={24} />
+                      </div>
+                      <h3 className="text-[10px] font-black text-primary uppercase tracking-[0.3em] border-l-2 border-primary pl-4">Calibration Insight</h3>
+                   </div>
+                   <p className="text-lg font-medium text-slate-300 leading-relaxed italic mb-10">
+                      "Marcus's PR cycle velocity has increased by <span className="text-white font-bold">14%</span> since protocol launch. However, FinOps goal (g2) remains at high risk. Recommend paired engineering session with Lead Hub."
+                   </p>
+                   <button className="w-full py-4 bg-primary text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.02] transition-all">Schedule Correction Sync</button>
+                </div>
+             </div>
+
+             {/* Institutional Support Matrix (Initiation Content) */}
+             <div className="bg-white border border-slate-200 rounded-[2.5rem] p-8 shadow-sm space-y-8">
+                <div className="flex items-center justify-between">
+                   <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center">
+                      <Users size={16} className="mr-2 text-primary" /> Support Matrix
+                   </h3>
+                   <span className="px-2 py-0.5 bg-primary/5 text-primary rounded-lg text-[8px] font-black uppercase">Institutional</span>
+                </div>
+                <div className="space-y-4">
+                   {pip.resources.map((res: any) => (
+                      <div key={res.id} className="p-4 bg-slate-50 border border-slate-100 rounded-2xl flex items-center space-x-4 hover:bg-white hover:shadow-md transition-all group cursor-default">
+                         <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm text-indigo-600 group-hover:scale-110 transition-transform">
+                            {res.type === 'Mentorship' ? <UserPlus size={18} /> : <GraduationCap size={18} />}
+                         </div>
+                         <div>
+                            <p className="text-xs font-black text-slate-900 uppercase tracking-tight truncate leading-none mb-1">{res.item}</p>
+                            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">{res.type}</p>
+                         </div>
+                      </div>
+                   ))}
+                </div>
+             </div>
+
+             {/* Governance & Sign-off Archive */}
+             <div className="bg-white border border-slate-200 rounded-[2.5rem] p-8 shadow-sm">
+                <div className="flex items-center justify-between mb-8">
+                   <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Initiation Sign-offs</h4>
+                   <span className="text-[9px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded uppercase border border-green-100">Verified Ledger</span>
+                </div>
+                <div className="space-y-6">
+                   <SignOffRow name="Alex Rivera" role="MANAGER" signed date="Oct 01" />
+                   <SignOffRow name="Marcus Vane" role="EMPLOYEE" signed date="Oct 02" />
+                   <SignOffRow name="Sarah Carter" role="HRBP" signed date="Oct 01" />
+                </div>
+             </div>
+          </div>
+       </div>
+    </div>
+  );
+};
+
+const SignOffRow = ({ name, role, signed, date }: any) => (
+  <div className="flex items-center justify-between">
+     <div className="flex items-center space-x-3">
+        <div className={`w-8 h-8 rounded-full flex items-center justify-center border ${signed ? 'bg-green-50 border-green-200 text-green-600 shadow-sm' : 'bg-slate-50 border-slate-200 text-slate-300'}`}>
+           {signed ? <ShieldCheck size={16} /> : <User size={16} />}
+        </div>
+        <div>
+           <p className="text-xs font-black text-slate-800 uppercase tracking-tight leading-none">{name}</p>
+           <p className="text-[8px] text-slate-400 font-bold uppercase mt-1">{role}</p>
+        </div>
+     </div>
+     <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">{date}</span>
+  </div>
+);
+
 const DataIndicator = ({ label, value, color }: any) => {
   const colorMap: any = { primary: 'text-primary', green: 'text-green-600', red: 'text-red-600' };
   return (
-    <div className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm text-center">
+    <div className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm text-center group hover:shadow-md transition-all">
       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{label}</p>
       <p className={`text-2xl font-black ${colorMap[color]}`}>{value}</p>
     </div>
@@ -521,11 +827,17 @@ const PersonRow = ({ person, canManage, onView }: any) => (
     <td className="px-6 py-4">
       <div className="flex items-center space-x-3">
         <img src={person.avatar} alt={person.name} className="w-10 h-10 rounded-full border-2 border-white shadow-sm object-cover" />
-        <div><p className="text-sm font-bold text-slate-800">{person.name}</p><p className="text-[10px] text-slate-500">{person.email}</p></div>
+        <div>
+           <p className="text-sm font-bold text-slate-800 group-hover:text-primary transition-colors">{person.name}</p>
+           <p className="text-[10px] text-slate-500">{person.email}</p>
+        </div>
       </div>
     </td>
     <td className="px-6 py-4">
-       <div><p className="text-xs font-bold text-slate-700">{person.title}</p><span className="px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded text-[9px] font-black uppercase tracking-widest">{person.level}</span></div>
+       <div>
+          <p className="text-xs font-bold text-slate-700">{person.title}</p>
+          <span className="px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded text-[9px] font-black uppercase tracking-widest">{person.level}</span>
+       </div>
     </td>
     <td className="px-6 py-4 text-xs font-medium text-slate-600 uppercase tracking-tight">{person.dept}</td>
     <td className="px-6 py-4">
@@ -534,6 +846,11 @@ const PersonRow = ({ person, canManage, onView }: any) => (
              <div className={`h-full rounded-full ${person.health > 80 ? 'bg-green-500' : person.health > 40 ? 'bg-yellow-500' : 'bg-red-500'}`} style={{ width: `${person.health}%` }}></div>
           </div>
           <span className={`text-[10px] font-black ${person.health < 50 ? 'text-red-500' : 'text-slate-400'}`}>{person.health}%</span>
+          {person.pipOngoing && (
+             <div className="p-1 bg-indigo-50 text-indigo-600 rounded-md border border-indigo-100" title="PIP Ongoing">
+                <PipIcon size={10} />
+             </div>
+          )}
        </div>
     </td>
     <td className="px-6 py-4 text-right">

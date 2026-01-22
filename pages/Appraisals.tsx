@@ -18,6 +18,7 @@ import {
   UserPlus,
   ClipboardCheck,
   AlertCircle,
+  AlertTriangle,
   Search,
   ArrowRight,
   ArrowLeft,
@@ -51,7 +52,11 @@ import {
   Calendar,
   Monitor,
   Star,
-  ChevronLeft
+  ChevronLeft,
+  Download,
+  Timer,
+  FileSearch,
+  ChevronRight as ChevronRightIcon
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { UserRole } from '../types';
@@ -112,8 +117,8 @@ const INITIAL_MY_OBJECTIVES = [
     confidence: 88,
     status: "Active",
     krs: [
-      { id: 'kr-1', title: "Maintain < 200ms latency on /v1/calibrate", target: 200, current: 182, unit: 'ms', type: 'numeric', selfScore: 0, selfComment: '', evidence: [] },
-      { id: 'kr-2', title: "Scale to 50k concurrent requests", target: 50000, current: 42000, unit: 'req', type: 'percentage', selfScore: 0, selfComment: '', evidence: [] }
+      { id: 'kr-1', title: "Maintain < 200ms latency on /v1/calibrate", target: 200, current: 182, unit: 'ms', type: 'numeric', selfScore: 85, selfComment: 'Consistently hitting targets despite peak load periods.', evidence: [{ name: 'latency_audit_sept.png' }] },
+      { id: 'kr-2', title: "Scale to 50k concurrent requests", target: 50000, current: 42000, unit: 'req', type: 'percentage', selfScore: 72, selfComment: 'Load balancer testing confirmed 42k. Final optimization scheduled for Q4.', evidence: [] }
     ]
   },
   { 
@@ -125,8 +130,7 @@ const INITIAL_MY_OBJECTIVES = [
     confidence: 45,
     status: "Active",
     krs: [
-      { id: 'kr-3', title: "Finalize all v3.5 UI specs", target: 100, current: 42, unit: '%', type: 'star', selfScore: 0, selfComment: '', evidence: [] },
-      { id: 'kr-4', title: "Strategic Design Alignment", target: 5, current: 3, unit: 'score', type: '5-scale', selfScore: 0, selfComment: '', evidence: [] }
+      { id: 'kr-3', title: "Finalize all v3.5 UI specs", target: 100, current: 42, unit: '%', type: 'percentage', selfScore: 42, selfComment: 'Core patterns are locked, but mobile-specific specs are lagging.', evidence: [{ name: 'pattern_library_draft.pdf' }] }
     ]
   },
 ];
@@ -149,7 +153,39 @@ const MOCK_PEER_REVIEWS = [
 ];
 
 const MOCK_TEAM_REPORTS = [
-  { id: 'tr1', name: 'MARCUS VANE', role: 'DEVOPS LEAD', selfProgress: 100, managerProgress: null, status: 'Needs Review', avatar: 'https://picsum.photos/seed/marcus/100/100', okrCount: 3 },
+  { 
+    id: 'tr1', 
+    name: 'MARCUS VANE', 
+    role: 'DEVOPS LEAD', 
+    selfProgress: 100, 
+    managerProgress: 42, 
+    status: 'Completed', 
+    avatar: 'https://picsum.photos/seed/marcus/100/100', 
+    okrCount: 3,
+    level: 'L7',
+    dept: 'Infrastructure',
+    pipOngoing: true,
+    pipData: {
+      progress: 68,
+      startDate: "Oct 01, 2024",
+      endDate: "Dec 30, 2024",
+      gaps: "Significant latency in PR reviews and consistent failure to meet Cloud Cost KPI targets for Infrastructure Unit.",
+      goals: [
+        { id: 'g1', title: "Reduce average PR cycle time to < 24h", status: "On Track", progress: 75 },
+        { id: 'g2', title: "Implement automated cost-tagging across production", status: "Delayed", progress: 40 },
+        { id: 'g3', title: "Maintain zero-downtime during system upgrades", status: "Exceeded", progress: 100 }
+      ],
+      actions: [
+        { id: 'a1', task: "Daily review of Infrastructure backlog", status: "Completed" },
+        { id: 'a2', task: "Weekly sync with Architecture board", status: "Active" },
+        { id: 'a3', task: "Documentation of FinOps spend strategy", status: "Pending" }
+      ],
+      resources: [
+        { id: 'r1', item: "Senior Mentor Pairing (Jordan Smith)", type: "Mentorship" },
+        { id: 'r2', item: "AWS FinOps Certification Course", type: "Formal Training" }
+      ]
+    }
+  },
   { id: 'tr2', name: 'SARAH CHEN', role: 'SR. PRODUCT MANAGER', selfProgress: 45, managerProgress: null, status: 'Draft', avatar: 'https://picsum.photos/seed/sarah/100/100', okrCount: 4 },
   { id: 'tr3', name: 'JORDAN SMITH', role: 'STAFF ENGINEER', selfProgress: 100, managerProgress: 92, status: 'Completed', avatar: 'https://picsum.photos/seed/jordan/100/100', okrCount: 2 },
   { id: 'tr4', name: 'LILA RAY', role: 'PRODUCT ANALYST', selfProgress: 100, managerProgress: 42, status: 'Completed', avatar: 'https://picsum.photos/seed/lila/100/100', okrCount: 5 },
@@ -171,6 +207,8 @@ const AppraisalsPage: React.FC<{ role: UserRole }> = ({ role }) => {
   
   const [isUploadScoreModalOpen, setIsUploadScoreModalOpen] = useState(false);
   const [viewingSummaryReport, setViewingSummaryReport] = useState<any>(null);
+  const [viewingPipProgress, setViewingPipProgress] = useState(false);
+  const [selectedPipPerson, setSelectedPipPerson] = useState<any>(null);
 
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
   const [isTakeAppraisalOpen, setIsTakeAppraisalOpen] = useState(false);
@@ -218,7 +256,30 @@ const AppraisalsPage: React.FC<{ role: UserRole }> = ({ role }) => {
     setActiveReviewReport(null); 
     setActivePeerReview(null);
     setViewingSummaryReport(null);
+    setViewingPipProgress(false);
+    setSelectedPipPerson(null);
   };
+
+  if (viewingPipProgress && selectedPipPerson) {
+    return (
+      <div className="space-y-6 animate-in fade-in duration-500 pb-12">
+        <PipProgressDashboard 
+          person={selectedPipPerson} 
+          onBack={handleBack} 
+        />
+      </div>
+    );
+  }
+
+  if (activeReviewReport) {
+    return (
+      <ManagerCalibrationWorkspace 
+        report={activeReviewReport}
+        objectives={INITIAL_MY_OBJECTIVES}
+        onBack={handleBack}
+      />
+    );
+  }
 
   if (viewingSummaryReport) {
     return (
@@ -433,7 +494,7 @@ const AppraisalsPage: React.FC<{ role: UserRole }> = ({ role }) => {
       )}
 
       {activeTab === 'team' && !isEmployee && (
-        <div className="bg-white border border-slate-200 rounded-[2rem] shadow-sm overflow-hidden animate-in fade-in">
+        <div className="bg-white border border-slate-200 rounded-[2.5rem] shadow-sm overflow-hidden animate-in fade-in">
           <div className="p-8 border-b border-slate-100 bg-slate-50/50">
             <h3 className="font-black text-slate-900 tracking-tight uppercase leading-none">Unit Calibration Queue</h3>
             <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-1.5">Process and calibrate completed appraisals from your direct reports</p>
@@ -448,6 +509,10 @@ const AppraisalsPage: React.FC<{ role: UserRole }> = ({ role }) => {
                 onUploadScore={() => {
                   setActiveReviewReport(report);
                   setIsUploadScoreModalOpen(true);
+                }}
+                onViewPip={() => {
+                  setSelectedPipPerson(report);
+                  setViewingPipProgress(true);
                 }}
               />
             ))}
@@ -481,6 +546,451 @@ const AppraisalsPage: React.FC<{ role: UserRole }> = ({ role }) => {
 };
 
 // --- SUB-COMPONENTS ---
+
+/**
+ * MANAGER CALIBRATION WORKSPACE
+ * The side-by-side review interface for managers
+ */
+const ManagerCalibrationWorkspace = ({ report, objectives, onBack }: { report: any, objectives: any[], onBack: () => void }) => {
+  const [activeObjIndex, setActiveObjIndex] = useState(0);
+  const [calibrationData, setCalibrationData] = useState<Record<string, { score: number, comment: string, files: any[] }>>({});
+  const [isFinalizing, setIsFinalizing] = useState(false);
+
+  const activeObj = objectives[activeObjIndex];
+
+  const handleUpdateScore = (krId: string, val: number) => {
+    setCalibrationData(prev => ({ ...prev, [krId]: { ...prev[krId], score: val } }));
+  };
+
+  const handleUpdateComment = (krId: string, val: string) => {
+    setCalibrationData(prev => ({ ...prev, [krId]: { ...prev[krId], comment: val } }));
+  };
+
+  const handleFileUpload = (krId: string) => {
+    const newFile = { id: Date.now(), name: `mgr_proof_v1_${Date.now()}.pdf`, size: '1.4MB' };
+    setCalibrationData(prev => ({ ...prev, [krId]: { ...prev[krId], files: [...(prev[krId]?.files || []), newFile] } }));
+  };
+
+  const calculateObjectiveCalibration = (obj: any) => {
+    if (!obj.krs || obj.krs.length === 0) return 0;
+    const scores = obj.krs.map((kr: any) => calibrationData[kr.id]?.score || 0);
+    return Math.round(scores.reduce((a: number, b: number) => a + b, 0) / obj.krs.length);
+  };
+
+  const allComplete = objectives.every(obj => obj.krs.every((kr: any) => (calibrationData[kr.id]?.score || 0) > 0));
+
+  if (isFinalizing) {
+    return (
+      <div className="fixed inset-0 z-[500] bg-white flex flex-col items-center justify-center p-12 text-center space-y-8 animate-in fade-in duration-700">
+         <div className="w-32 h-32 bg-indigo-600 text-white rounded-[3rem] flex items-center justify-center shadow-2xl shadow-indigo-100 border-4 border-white animate-bounce">
+            <ShieldCheck size={64} />
+         </div>
+         <div className="space-y-4">
+            <h2 className="text-4xl font-black text-slate-900 uppercase tracking-tighter leading-none">Calibration Finalized</h2>
+            <p className="text-slate-500 font-bold max-w-md mx-auto leading-relaxed">The appraisal record for <span className="text-indigo-600">{report.name}</span> has been updated and locked in the institutional ledger.</p>
+         </div>
+         <button onClick={onBack} className="px-12 py-5 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-2xl hover:scale-105 transition-all">Exit Workspace</button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 z-[400] bg-slate-50 flex flex-col animate-in slide-in-from-right duration-500">
+       <header className="h-24 bg-white border-b border-slate-200 flex items-center justify-between px-12 shrink-0 shadow-sm z-10">
+          <div className="flex items-center space-x-6">
+             <button onClick={onBack} className="p-3 bg-slate-50 border border-slate-200 rounded-2xl hover:bg-slate-100 transition-all text-slate-400">
+                <ChevronLeft size={24} />
+             </button>
+             <div className="h-10 w-px bg-slate-100 mx-2" />
+             <div className="flex items-center space-x-5">
+                <img src={report.avatar} className="w-14 h-14 rounded-2xl border-2 border-white shadow-xl object-cover" alt={report.name} />
+                <div>
+                   <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight leading-none">Reviewing: {report.name}</h2>
+                   <p className="text-[10px] text-slate-400 font-bold uppercase mt-1.5 tracking-[0.2em]">{report.role} • {report.dept}</p>
+                </div>
+             </div>
+          </div>
+          <div className="flex items-center space-x-8">
+             <div className="text-right">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Calibration Status</p>
+                <div className="flex items-center space-x-3 mt-1">
+                   <div className="h-2 w-32 bg-slate-100 rounded-full overflow-hidden shadow-inner">
+                      <div className="h-full bg-indigo-600 transition-all" style={{ width: `${Math.round((objectives.filter(obj => calculateObjectiveCalibration(obj) > 0).length / objectives.length) * 100)}%` }} />
+                   </div>
+                   <span className="text-xs font-black text-indigo-600">IN PROGRESS</span>
+                </div>
+             </div>
+             <button 
+                onClick={onBack}
+                className="p-4 text-slate-300 hover:text-red-500 transition-colors"
+             >
+                <X size={32}/>
+             </button>
+          </div>
+       </header>
+
+       <div className="flex-1 flex overflow-hidden">
+          <aside className="w-80 border-r border-slate-200 bg-white flex flex-col shrink-0">
+             <div className="p-8 border-b border-slate-50">
+                <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mb-6">Strategy Alignment nodes</h3>
+                <div className="space-y-2">
+                   {objectives.map((obj, i) => {
+                     const isCalibrated = calculateObjectiveCalibration(obj) > 0;
+                     const isActive = activeObjIndex === i;
+                     return (
+                       <button 
+                        key={obj.id} 
+                        onClick={() => setActiveObjIndex(i)}
+                        className={`w-full p-5 rounded-[1.5rem] border-2 transition-all flex items-center justify-between text-left group ${isActive ? 'bg-indigo-600 border-indigo-600 text-white shadow-xl shadow-indigo-100' : 'bg-white border-slate-100 text-slate-600 hover:border-indigo-200'}`}
+                       >
+                          <div className="flex items-center space-x-3 min-w-0">
+                             <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 font-black text-sm ${isActive ? 'bg-white/20' : 'bg-slate-50 text-slate-400 group-hover:text-indigo-600'}`}>
+                                {i + 1}
+                             </div>
+                             <span className="text-[11px] font-black uppercase tracking-tight truncate leading-tight">{obj.title}</span>
+                          </div>
+                          {isCalibrated && <Check size={20} className={isActive ? 'text-white' : 'text-green-500'} />}
+                       </button>
+                     );
+                   })}
+                </div>
+             </div>
+             <div className="mt-auto p-10 bg-slate-50/50 border-t border-slate-50 space-y-8">
+                <button 
+                  disabled={!allComplete}
+                  onClick={() => setIsFinalizing(true)}
+                  className={`w-full py-5 rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] shadow-2xl transition-all ${allComplete ? 'bg-slate-900 text-white shadow-slate-200 hover:scale-[1.02] active:scale-95' : 'bg-slate-200 text-slate-400 cursor-not-allowed opacity-50'}`}
+                >
+                   Authorize Calibration
+                </button>
+             </div>
+          </aside>
+
+          <main className="flex-1 overflow-y-auto custom-scrollbar p-16 bg-white">
+             <div className="max-w-5xl mx-auto space-y-16">
+                <div className="flex items-center space-x-6 animate-in slide-in-from-bottom-4">
+                   <div className={`w-20 h-20 rounded-3xl flex items-center justify-center shadow-2xl ${activeObj.type === 'KPI' ? 'bg-secondary text-white' : 'bg-primary text-white'}`}>
+                     {activeObj.type === 'KPI' ? <Zap size={36} /> : <Target size={36} />}
+                   </div>
+                   <div>
+                      <span className="text-[11px] font-black text-indigo-600 uppercase tracking-[0.3em]">Institutional Node {activeObjIndex + 1} of {objectives.length}</span>
+                      <h1 className="text-4xl font-black text-slate-900 uppercase tracking-tighter leading-none mt-2">{activeObj.title}</h1>
+                   </div>
+                </div>
+
+                <div className="space-y-12 pb-32">
+                   {activeObj.krs.map((kr: any, idx: number) => (
+                     <div key={kr.id} className="space-y-6">
+                        <div className="flex items-center space-x-4 px-4">
+                           <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400"><GitBranch size={20}/></div>
+                           <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">{kr.title}</h3>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                           {/* SELF APPRAISAL COLUMN (READ-ONLY) */}
+                           <div className="bg-slate-50/50 border border-slate-100 rounded-[2.5rem] p-10 space-y-8 relative">
+                              <div className="absolute top-0 right-0 p-6 opacity-5 pointer-events-none"><User size={80} /></div>
+                              <div className="flex items-center justify-between border-b border-slate-100 pb-6">
+                                 <div>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Perspective</p>
+                                    <h4 className="text-sm font-black text-slate-900 uppercase">Self-Appraisal</h4>
+                                 </div>
+                                 <div className="text-right">
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Score</p>
+                                    <span className="text-2xl font-black text-slate-900">{kr.selfScore}%</span>
+                                 </div>
+                              </div>
+                              <div className="space-y-3">
+                                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Qualitative Narrative</p>
+                                 <div className="p-6 bg-white border border-slate-100 rounded-3xl text-sm font-medium text-slate-600 leading-relaxed italic shadow-inner">
+                                    "{kr.selfComment}"
+                                 </div>
+                              </div>
+                              <div className="space-y-3">
+                                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Evidence Artifacts</p>
+                                 <div className="flex flex-wrap gap-2">
+                                    {kr.evidence && kr.evidence.length > 0 ? kr.evidence.map((f: any, i: number) => (
+                                       <div key={i} className="flex items-center space-x-2 px-4 py-2 bg-white border border-slate-200 rounded-xl shadow-sm">
+                                          <FileIcon size={12} className="text-primary" />
+                                          <span className="text-[10px] font-bold text-slate-700">{f.name}</span>
+                                       </div>
+                                    )) : (
+                                       <span className="text-[10px] text-slate-300 font-bold italic">No documents attached.</span>
+                                    )}
+                                 </div>
+                              </div>
+                           </div>
+
+                           {/* MANAGER CALIBRATION COLUMN (EDITABLE) */}
+                           <div className="bg-white border-2 border-indigo-100 rounded-[2.5rem] p-10 space-y-8 shadow-xl relative ring-8 ring-indigo-50/20">
+                              <div className="absolute top-0 right-0 p-6 opacity-5 pointer-events-none"><Zap size={80} className="text-indigo-600" /></div>
+                              <div className="flex items-center justify-between border-b border-indigo-50 pb-6">
+                                 <div>
+                                    <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest leading-none mb-1">Perspective</p>
+                                    <h4 className="text-sm font-black text-indigo-600 uppercase">Manager Calibration</h4>
+                                 </div>
+                                 <div className="text-right">
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Calibration Score</p>
+                                    <div className="flex items-center space-x-2">
+                                       <input 
+                                          type="number" 
+                                          value={calibrationData[kr.id]?.score || ''}
+                                          onChange={e => handleUpdateScore(kr.id, Math.min(100, Math.max(0, parseInt(e.target.value) || 0)))}
+                                          placeholder="0-100"
+                                          className="w-16 bg-slate-50 border-none rounded-xl px-2 py-2 font-black text-xl outline-none focus:ring-4 focus:ring-indigo-600/5 transition-all text-center shadow-inner" 
+                                       />
+                                       <span className="text-lg font-black text-indigo-200">%</span>
+                                    </div>
+                                 </div>
+                              </div>
+                              <div className="space-y-3">
+                                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Calibration Context</p>
+                                 <textarea 
+                                    value={calibrationData[kr.id]?.comment || ''}
+                                    onChange={e => handleUpdateComment(kr.id, e.target.value)}
+                                    placeholder="Document your observations and justifications for the calibrated score..."
+                                    className="w-full bg-slate-50 border-none rounded-3xl p-6 text-sm font-medium outline-none focus:ring-4 focus:ring-indigo-600/5 transition-all h-32 resize-none shadow-inner"
+                                 />
+                              </div>
+                              <div className="space-y-3">
+                                 <div className="flex items-center justify-between px-1">
+                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Supporting Evidence</p>
+                                    <button 
+                                       onClick={() => handleFileUpload(kr.id)}
+                                       className="text-[9px] font-black text-indigo-600 uppercase tracking-widest hover:underline flex items-center space-x-1"
+                                    >
+                                       <Plus size={10} />
+                                       <span>Add Document</span>
+                                    </button>
+                                 </div>
+                                 <div className="flex flex-wrap gap-2">
+                                    {calibrationData[kr.id]?.files?.map((f: any) => (
+                                       <div key={f.id} className="flex items-center space-x-3 px-4 py-2 bg-indigo-50 border border-indigo-100 rounded-xl animate-in zoom-in-95">
+                                          <FileIcon size={12} className="text-indigo-600" />
+                                          <span className="text-[10px] font-bold text-indigo-900 truncate max-w-[120px]">{f.name}</span>
+                                          <button className="text-indigo-300 hover:text-red-500"><X size={12}/></button>
+                                       </div>
+                                    ))}
+                                    {(!calibrationData[kr.id]?.files || calibrationData[kr.id]?.files.length === 0) && (
+                                       <button 
+                                          onClick={() => handleFileUpload(kr.id)}
+                                          className="w-full border-2 border-dashed border-slate-100 rounded-2xl py-6 flex flex-col items-center justify-center text-slate-300 hover:text-indigo-600 hover:border-indigo-600/20 transition-all group/up"
+                                       >
+                                          <Upload size={18} className="mb-1 group-hover/up:scale-110 transition-transform" />
+                                          <span className="text-[9px] font-black uppercase tracking-widest">Attach Calibration Proof</span>
+                                       </button>
+                                    )}
+                                 </div>
+                              </div>
+                           </div>
+                        </div>
+                     </div>
+                   ))}
+
+                   <div className="flex items-center justify-between pt-20 border-t border-slate-50">
+                      <button 
+                        disabled={activeObjIndex === 0}
+                        onClick={() => setActiveObjIndex(activeObjIndex - 1)}
+                        className="flex items-center space-x-3 px-10 py-5 border border-slate-200 bg-white text-slate-600 rounded-[2rem] text-[10px] font-black uppercase tracking-[0.2em] hover:bg-slate-50 transition-all disabled:opacity-30 shadow-sm"
+                      >
+                         <ChevronLeft size={20} />
+                         <span>Previous Objective</span>
+                      </button>
+                      <button 
+                        disabled={activeObjIndex === objectives.length - 1}
+                        onClick={() => setActiveObjIndex(activeObjIndex + 1)}
+                        className="flex items-center space-x-4 px-14 py-5 bg-indigo-600 text-white rounded-[2rem] text-[10px] font-black uppercase tracking-[0.2em] shadow-2xl shadow-indigo-100 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-30"
+                      >
+                         <span>Next Strategic Node</span>
+                         <ChevronRight size={20} />
+                      </button>
+                   </div>
+                </div>
+             </div>
+          </main>
+       </div>
+    </div>
+  );
+};
+
+/**
+ * PIP PROGRESS DASHBOARD - COMPREHENSIVE VIEW (MANAGER ACCESSIBLE)
+ */
+const PipProgressDashboard = ({ person, onBack }: { person: any, onBack: () => void }) => {
+  const pip = person.pipData;
+
+  return (
+    <div className="space-y-8 animate-in slide-in-from-right duration-500 pb-20">
+       {/* Header & Meta */}
+       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="flex items-center space-x-6">
+             <button 
+               onClick={onBack}
+               className="p-3 bg-white border border-slate-200 rounded-2xl hover:bg-slate-50 transition-all text-slate-500 shadow-sm"
+             >
+                <ArrowLeft size={20} />
+             </button>
+             <div>
+                <div className="flex items-center space-x-3 mb-1">
+                   <h1 className="text-3xl font-black text-slate-900 tracking-tight uppercase leading-none">Performance Improvement tracking</h1>
+                </div>
+                <p className="text-slate-500 text-sm font-medium uppercase tracking-widest">Remediation Milestone Monitor: {person.name} ({person.level})</p>
+             </div>
+          </div>
+          
+          <div className="flex flex-wrap items-center gap-3">
+             <button className="px-6 py-3 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-indigo-100 hover:scale-105 transition-all">
+                ONGOING CYCLE
+             </button>
+             <button className="px-6 py-3 bg-white border border-slate-200 text-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-sm hover:bg-slate-50 transition-all">
+                EXPORT PROGRESS REPORT
+             </button>
+             <button className="px-8 py-3 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl hover:bg-black transition-all">
+                UPDATE MILESTONES
+             </button>
+          </div>
+       </div>
+
+       {/* Overall Progress Hub */}
+       <div className="bg-white border border-slate-200 rounded-[3rem] p-10 shadow-sm flex flex-col md:flex-row items-center justify-between gap-12 relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-10 opacity-5">
+             <Target size={180} className="text-slate-900" />
+          </div>
+          <div className="flex items-center space-x-10 relative z-10">
+             <div className="w-32 h-32 rounded-full border-[10px] border-slate-50 flex flex-col items-center justify-center relative bg-white shadow-2xl">
+                <svg className="absolute inset-0 w-full h-full -rotate-90">
+                   <circle cx="50%" cy="50%" r="58" fill="transparent" stroke="#F1F5F9" strokeWidth="10" />
+                   <circle cx="50%" cy="50%" r="58" fill="transparent" stroke="#0F172A" strokeWidth="10" strokeDasharray={`${(pip.progress / 100) * 364} 364`} strokeLinecap="round" />
+                </svg>
+                <span className="text-3xl font-black text-slate-900">{pip.progress}%</span>
+                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Attainment</span>
+             </div>
+             <div>
+                <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight leading-none mb-3">Overall Plan Attainment</h3>
+                <div className="flex items-center space-x-8">
+                   <div className="space-y-1">
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Active Horizon</p>
+                      <p className="text-sm font-bold text-slate-700">{pip.startDate} — {pip.endDate}</p>
+                   </div>
+                   <div className="w-[1px] h-10 bg-slate-100" />
+                   <div className="space-y-1">
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Next Calibration</p>
+                      <div className="flex items-center space-x-2 text-indigo-600">
+                         <Timer size={14} />
+                         <span className="text-sm font-bold">12 Days Remaining</span>
+                      </div>
+                   </div>
+                </div>
+             </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4 relative z-10 min-w-[320px]">
+             <div className="p-5 bg-slate-50 border border-slate-100 rounded-3xl text-center">
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Goals Hit</p>
+                <p className="text-2xl font-black text-slate-900">2 / 3</p>
+             </div>
+             <div className="p-5 bg-slate-50 border border-slate-100 rounded-3xl text-center">
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Actions Logged</p>
+                <p className="text-2xl font-black text-slate-900">8 / 12</p>
+             </div>
+          </div>
+       </div>
+
+       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <div className="lg:col-span-8 space-y-8">
+             <div className="bg-white border border-slate-200 rounded-[2.5rem] p-10 shadow-sm space-y-8">
+                <div className="flex items-center space-x-3 mb-2">
+                   <div className="p-2 bg-red-50 text-red-600 rounded-xl">
+                      <AlertTriangle size={20} />
+                   </div>
+                   <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">Identified Deficiencies</h3>
+                </div>
+                <div className="p-8 bg-slate-50 border border-slate-100 rounded-[2rem] shadow-inner relative overflow-hidden group">
+                   <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity">
+                      <FileSearch size={100} className="text-red-600" />
+                   </div>
+                   <p className="text-base font-medium text-slate-600 leading-relaxed italic relative z-10">
+                      "{pip.gaps}"
+                   </p>
+                </div>
+             </div>
+
+             <div className="bg-white border border-slate-200 rounded-[2.5rem] p-10 shadow-sm space-y-10">
+                <div className="flex items-center justify-between">
+                   <div>
+                      <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">SMART Target Status</h3>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Institutional success vector tracking</p>
+                   </div>
+                </div>
+
+                <div className="space-y-4">
+                   {pip.goals.map((goal: any) => (
+                     <div key={goal.id} className="p-6 bg-slate-50/50 border border-slate-100 rounded-3xl group hover:bg-white hover:shadow-xl transition-all duration-500">
+                        <div className="flex items-center justify-between mb-6">
+                           <div className="flex items-center space-x-5">
+                              <div className={`p-3 rounded-2xl shadow-sm ${goal.status === 'On Track' ? 'bg-indigo-50 text-indigo-600' : goal.status === 'Exceeded' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
+                                 <Target size={20} />
+                              </div>
+                              <div>
+                                 <h4 className="text-sm font-black text-slate-800 uppercase tracking-tight group-hover:text-primary transition-colors">{goal.title}</h4>
+                                 <p className="text-[9px] text-slate-400 font-bold uppercase mt-1">STATUS: <span className={goal.status === 'On Track' ? 'text-indigo-600' : goal.status === 'Exceeded' ? 'text-green-600' : 'text-red-600'}>{goal.status}</span></p>
+                              </div>
+                           </div>
+                           <div className="text-right">
+                              <span className="text-2xl font-black text-slate-900">{goal.progress}%</span>
+                              <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Achieved</p>
+                           </div>
+                        </div>
+                        <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden shadow-inner">
+                           <div className={`h-full transition-all duration-1000 ${goal.progress === 100 ? 'bg-green-500' : 'bg-slate-900'}`} style={{ width: `${goal.progress}%` }} />
+                        </div>
+                     </div>
+                   ))}
+                </div>
+             </div>
+          </div>
+
+          <div className="lg:col-span-4 space-y-8">
+             <div className="bg-slate-900 rounded-[3rem] p-10 text-white relative overflow-hidden group shadow-2xl border border-slate-800">
+                <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+                   <BrainCircuit size={120} className="text-primary" />
+                </div>
+                <div className="relative z-10">
+                   <div className="flex items-center space-x-4 mb-8">
+                      <div className="w-12 h-12 bg-primary/20 text-primary border border-primary/20 rounded-2xl flex items-center justify-center shadow-lg animate-pulse">
+                         <Sparkles size={24} />
+                      </div>
+                      <h3 className="text-[10px] font-black text-primary uppercase tracking-[0.3em] border-l-2 border-primary pl-4">Calibration Insight</h3>
+                   </div>
+                   <p className="text-lg font-medium text-slate-300 leading-relaxed italic mb-10">
+                      "Real-time velocity for this personnel is tracking at <span className="text-white font-bold">68%</span>. Critical path correction required for the Cloud Tagging vector (g2) before cycle closure."
+                   </p>
+                   <button className="w-full py-4 bg-primary text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.02] transition-all">Request Performance Sync</button>
+                </div>
+             </div>
+
+             <div className="bg-white border border-slate-200 rounded-[2.5rem] p-8 shadow-sm space-y-8">
+                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center">
+                   <Users size={16} className="mr-2 text-primary" /> Catalyst Resources
+                </h3>
+                <div className="space-y-4">
+                   {pip.resources.map((res: any) => (
+                      <div key={res.id} className="p-4 bg-slate-50 border border-slate-100 rounded-2xl flex items-center space-x-4 hover:bg-white hover:shadow-md transition-all group">
+                         <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm text-indigo-600 group-hover:scale-110 transition-transform">
+                            {res.type === 'Mentorship' ? <UserPlus size={18} /> : <Award size={18} />}
+                         </div>
+                         <div>
+                            <p className="text-xs font-black text-slate-900 uppercase tracking-tight truncate leading-none mb-1">{res.item}</p>
+                            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">{res.type}</p>
+                         </div>
+                      </div>
+                   ))}
+                </div>
+             </div>
+          </div>
+       </div>
+    </div>
+  );
+};
 
 /**
  * Peer Review Detail View Component
@@ -552,7 +1062,7 @@ const PeerReviewDetailView = ({ review }: { review: any }) => {
            </div>
          )) : (
             <div className="bg-white border border-slate-200 rounded-[2.5rem] p-20 text-center">
-               <AlertCircle size={48} className="mx-auto text-slate-100 mb-4" />
+               <AlertTriangle size={48} className="mx-auto text-slate-100 mb-4" />
                <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">No granular objective feedback available for this cycle.</p>
             </div>
          )}
@@ -935,7 +1445,7 @@ const AppraisalSummaryView = ({ report, objectives }: { report: any, objectives:
   );
 };
 
-const TeamReviewItem = ({ id, name, role, selfProgress, managerProgress, status, avatar, okrCount, onReview, onViewSummary, onUploadScore }: any) => {
+const TeamReviewItem = ({ id, name, role, selfProgress, managerProgress, status, avatar, okrCount, pipOngoing, onReview, onViewSummary, onUploadScore, onViewPip }: any) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const isCompleted = status === 'Completed';
   const threshold = 50;
@@ -983,7 +1493,16 @@ const TeamReviewItem = ({ id, name, role, selfProgress, managerProgress, status,
           {!isCompleted ? (
             <button onClick={(e) => { e.stopPropagation(); onReview(); }} className="px-10 py-3 bg-primary text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all">Review</button>
           ) : (
-            <>
+            <div className="flex items-center space-x-3">
+              {pipOngoing && (
+                 <button 
+                  onClick={(e) => { e.stopPropagation(); onViewPip(); }}
+                  className="px-6 py-2.5 bg-indigo-50 border border-indigo-100 text-indigo-700 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-sm hover:bg-indigo-600 hover:text-white transition-all flex items-center space-x-2"
+                 >
+                    <ShieldAlert size={14} />
+                    <span>View PIP Progress</span>
+                 </button>
+              )}
               <button onClick={(e) => { e.stopPropagation(); setIsMenuOpen(!isMenuOpen); }} className="p-3 bg-white border border-slate-200 text-slate-400 hover:text-primary rounded-xl hover:bg-slate-50 transition-all shadow-sm">
                 <MoreVertical size={20} />
               </button>
@@ -999,7 +1518,7 @@ const TeamReviewItem = ({ id, name, role, selfProgress, managerProgress, status,
                        <Upload size={16} className="text-slate-400" />
                        <span>Upload Final Score</span>
                     </button>
-                    {isMgrLow && (
+                    {isMgrLow && !pipOngoing && (
                        <button onClick={(e) => { e.stopPropagation(); setIsMenuOpen(false); navigate(`/initiate-pip/${id}`); }} className="w-full flex items-center space-x-3 px-3 py-3 text-xs font-bold text-red-600 hover:bg-red-50 rounded-xl transition-all text-left border-t border-slate-50 mt-1">
                           <ShieldAlert size={16} />
                           <span>Initiate PIP</span>
@@ -1008,7 +1527,7 @@ const TeamReviewItem = ({ id, name, role, selfProgress, managerProgress, status,
                   </div>
                 </>
               )}
-            </>
+            </div>
           )}
         </div>
       </div>
@@ -1134,6 +1653,7 @@ const RespondToRequestModal = ({ request, onClose }: any) => {
   );
 };
 
+/* Unified Helper Components - Fixed redeclaration by defining once */
 const SummaryCard = ({ label, value, trend, icon }: any) => (
   <div className="bg-white border border-slate-200 p-6 rounded-3xl shadow-sm h-full flex flex-col justify-between group hover:shadow-md transition-all">
     <div className="flex justify-between items-start mb-4">
@@ -1184,7 +1704,7 @@ const OKRDetailView = ({ objectives }: { objectives: any[] }) => (
             {obj.krs.map((kr: any) => (
                 <div key={kr.id} className="p-4 bg-slate-50 rounded-2xl flex items-center justify-between">
                     <span className="text-xs font-bold text-slate-700">{kr.title}</span>
-                    <span className="text-[10px] font-black text-slate-400">{kr.selfScore}{kr.unit}</span>
+                    <span className="text-[10px] font-black text-slate-400">{kr.selfScore}{kr.unit || '%'}</span>
                 </div>
             ))}
         </div>
@@ -1340,7 +1860,7 @@ const RequestFeedbackModal = ({ onClose, objectives }: any) => {
 
             {/* Feedback Mode */}
             <div className="space-y-6">
-               <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest px-1">Engagement Framework</label>
+               <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] border-l-4 border-primary pl-4">Engagement Framework</label>
                <div className="grid grid-cols-2 gap-4">
                   <button 
                     onClick={() => setFeedbackMode('in-app')}
@@ -1728,15 +2248,6 @@ const KRScoreInput = ({ type, value, onChange }: { type: string, value: number, 
   }
 
   return null;
-};
-
-const TakeAppraisalWorkspaceOld = ({ onClose, objectives }: any) => {
-  return (
-    <div className="fixed inset-0 z-[250] bg-slate-50/95 backdrop-blur-xl flex flex-col p-20 items-center justify-center">
-       <div className="text-2xl font-black text-slate-900 mb-8 uppercase tracking-widest">Appraisal Workspace active</div>
-       <button onClick={onClose} className="px-10 py-3 bg-slate-900 text-white rounded-xl font-bold uppercase tracking-widest text-xs shadow-2xl">Return to Dashboard</button>
-    </div>
-  );
 };
 
 export default AppraisalsPage;
